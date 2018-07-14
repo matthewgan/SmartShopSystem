@@ -8,6 +8,7 @@
 #include "communication.h"
 
 #define DoorRelayPin  12
+#define RelayStayLowTime 300
 #define LedLastTime 3000
 
 unsigned long timestamp;
@@ -32,11 +33,12 @@ void openDoor()
 	LED_keepRed();
 	timestamp = millis();
 	digitalWrite(DoorRelayPin, LOW);
-	delay(300);
+	delay(RelayStayLowTime);
 	digitalWrite(DoorRelayPin, HIGH);
 }
 
 void loop() {
+	//Change LED color when door is open
 	if ((millis() - timestamp)>LedLastTime)
 	{
 		LED_keepGreen();
@@ -71,7 +73,7 @@ void ParseFrameToCommand(uint8_t *frame)
 
 	switch (cmdtype)
 	{
-	case OpenDoor:
+	case OpenGate:
 	{
 		openDoor();
 		break;

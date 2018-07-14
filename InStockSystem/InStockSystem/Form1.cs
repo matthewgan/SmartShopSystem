@@ -261,6 +261,7 @@ namespace InStockSystem
                 char[] trimchars = new char[2] { '\0', ' ' };
                 string code = e.Code.Trim(trimchars);
                 APIClient.MerchandiseInfoShow info = client.GetMerchandiseInfo(new APIClient.Barcode() { barcode = code });
+                System.Threading.Thread.Sleep(3000);
                 SetDataGridViewInfo(dataGridView1, info);
                 //保存本次查询结果
                 lastinfo = info;

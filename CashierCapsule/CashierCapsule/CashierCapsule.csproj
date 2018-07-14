@@ -115,7 +115,6 @@
     <Compile Include="Form1.Designer.cs">
       <DependentUpon>Form1.cs</DependentUpon>
     </Compile>
-    <Compile Include="PlatformController.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <EmbeddedResource Include="Form1.resx">
@@ -145,9 +144,6 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="License-LGPL.txt" />
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\..\APIClient\APIClient.csproj">
       <Project>{06b20ee6-41c0-4a81-a7cd-0b45fe641165}</Project>
       <Name>APIClient</Name>
@@ -160,6 +156,10 @@
       <Project>{67f2ad21-d85a-455e-b8cd-8ce409bb10d0}</Project>
       <Name>BaiduSpeech</Name>
     </ProjectReference>
+    <ProjectReference Include="..\..\BarcodeGenerator\BarcodeGenerator.csproj">
+      <Project>{72bddaf8-b55c-4371-a643-6dffb4c5197a}</Project>
+      <Name>BarcodeGenerator</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\CameraCV\CameraCV.csproj">
       <Project>{ae7f041d-af5a-4a0d-8d20-a3a87f22cad3}</Project>
       <Name>CameraCV</Name>
@@ -171,6 +171,10 @@
     <ProjectReference Include="..\..\DetectFace\DetectFace.csproj">
       <Project>{36cddfa3-8ea1-4a1f-9a57-f5b73f5b73d6}</Project>
       <Name>DetectFace</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\PlatformController\PlatformController.csproj">
+      <Project>{36d166e5-dd67-481f-9784-661190d6d989}</Project>
+      <Name>PlatformController</Name>
     </ProjectReference>
     <ProjectReference Include="..\..\SimpleLogger\SimpleLogger.csproj">
       <Project>{59793784-dc2e-461f-ab4d-975f1990777c}</Project>

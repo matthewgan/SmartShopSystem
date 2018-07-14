@@ -52,6 +52,13 @@ namespace EntranceGate
         /// </summary>
         BaiduFace CVclient;
 
+        /// <summary>
+        /// 人脸识别错误次数
+        /// </summary>
+        int faceError = 0;
+
+        static string shopid = "1";
+
         #region delegate methods
         /// <summary>
         /// RichTextBox委托赋值
@@ -131,12 +138,96 @@ namespace EntranceGate
                 tileButton.LabelText = userInfo.nickName;
             }
         }
+
+        /// <summary>
+        /// PictureBoxVisible委托赋值
+        /// </summary>
+        /// <param name="box"></param>
+        /// <param name="isVisiable"></param>
+        delegate void setPictureBoxVisibility(PictureBox box, bool isVisiable);
+
+        /// <summary>
+        /// PictureBoxVisible委托赋值函数
+        /// </summary>
+        /// <param name="box"></param>
+        /// <param name="isVisiable"></param>
+        private void SetPictureBoxVisibility(PictureBox box, bool isVisiable)
+        {
+            if (box.InvokeRequired)
+            {
+                setPictureBoxVisibility setThis = new setPictureBoxVisibility(SetPictureBoxVisibility);
+
+                box.Invoke(setThis, box, isVisiable);
+            }
+            else
+            {
+                box.Visible = isVisiable;
+            }
+        }
+
+        /// <summary>
+        /// tilebuttonVisable委托赋值
+        /// </summary>
+        /// <param name="button"></param>
+        /// <param name="isVisiable"></param>
+        delegate void setTileButtonVisiable(Bunifu.Framework.UI.BunifuTileButton button, bool isVisiable);
+
+        /// <summary>
+        /// tilebuttonVisiable委托赋值函数
+        /// </summary>
+        /// <param name="tileButton"></param>
+        /// <param name="isVisable"></param>
+        private void SetTileButtonVisable(Bunifu.Framework.UI.BunifuTileButton tileButton, bool isVisiable)
+        {
+            if (tileButton.InvokeRequired)
+            {
+                setTileButtonVisiable setThis = new setTileButtonVisiable(SetTileButtonVisable);
+
+                tileButton.Invoke(setThis, tileButton, isVisiable);
+            }
+            else
+            {
+                tileButton.Visible = isVisiable;
+            }
+        }
+
+        /// <summary>
+        /// messageLabel委托赋值
+        /// </summary>
+        /// <param name="label"></param>
+        /// <param name="message"></param>
+        delegate void setMessageLabel(Bunifu.Framework.UI.BunifuCustomLabel label, string message);
+
+        /// <summary>
+        /// tilebuttonVisiable委托赋值函数
+        /// </summary>
+        /// <param name="tileButton"></param>
+        /// <param name="isVisable"></param>
+        private void SetMessageLabel(Bunifu.Framework.UI.BunifuCustomLabel label, string message)
+        {
+            if (label.InvokeRequired)
+            {
+                setMessageLabel setThis = new setMessageLabel(SetMessageLabel);
+
+                label.Invoke(setThis, label, message);
+            }
+            else
+            {
+                label.Text = message;
+            }
+        }
+
         #endregion delegate methods
 
         /// <summary>
         /// 定时刷新picturebox
         /// </summary>
         System.Timers.Timer pictureboxRefreshTimer;
+
+        /// <summary>
+        /// 定时刷新faceError
+        /// </summary>
+        System.Timers.Timer faceErrorResetTimer;
 
         public Form1()
         {
@@ -166,6 +257,22 @@ namespace EntranceGate
             pictureboxRefreshTimer.Elapsed += new System.Timers.ElapsedEventHandler(pictureboxRefresh);
             pictureboxRefreshTimer.AutoReset = true;
             pictureboxRefreshTimer.Start();
+
+            //启动timer，周期刷新faceError
+            faceErrorResetTimer = new System.Timers.Timer();
+            faceErrorResetTimer.Elapsed += new System.Timers.ElapsedEventHandler(faceErrorReset);
+            faceErrorResetTimer.AutoReset = true;
+            faceErrorResetTimer.Interval = 10000;
+        }
+
+        /// <summary>
+        /// 刷新faceError,超时清零
+        /// </summary>
+        private void faceErrorReset(object sender, EventArgs e)
+        {
+            faceError = 0;
+            faceErrorResetTimer.Close();
+
         }
 
         /// <summary>
@@ -207,12 +314,13 @@ namespace EntranceGate
         {
             //Lock the scanner to skip code
             System.Timers.Timer LockTimer = new System.Timers.Timer();
-            LockTimer.Interval = 5000;  //5 second protect time
+            LockTimer.Interval = 3000;  //5 second protect time
             LockTimer.Elapsed += new ElapsedEventHandler(UnlockScanner);
             LockTimer.AutoReset = false;
             LockTimer.Start();
             logger.Info("Recieved code=" + e.Code);
             logger.Trace("Lock QR code scanner started " + DateTime.Now.ToString());
+            scanner.Lock();
 
             char[] trimchars = new char[2] { '\0', ' ' };
             string trimcode = e.Code.Trim(trimchars);
@@ -223,6 +331,10 @@ namespace EntranceGate
             if (userinfo.nickName != string.Empty)
             {
                 SetTileButton(tileBtn, userinfo);
+                SetTileButtonVisable(tileBtn, true);
+                SetPictureBox(pictureBox1, new Bitmap("success.gif"));
+                SetPictureBoxVisibility(loadBox_small, false);
+                SetMessageLabel(bunifuCustomLabel1, " ");
 
                 OpenGate();
 
@@ -288,9 +400,11 @@ namespace EntranceGate
             //call back function register
             //camera.ImageCaptured += ShowFaceInPictureBox;
             camera.FaceCaptured += ShowFaceInPictureBox;
-            camera.FaceCaptured += ShowFaceInPictureBox;
+            //camera.FaceCaptured += ShowFaceInPictureBox;
+            camera.localFaceDetect = true;
+            camera.localFaceDistanceFilter = true;
             //设置人脸过滤的大小阈值, 100*100pixel的最小过滤框
-            camera.SetThreshold(100);
+            camera.SetThreshold(185);
 
             camera.Open();
             CameraCV.StartProcessOnFrame();
@@ -316,8 +430,8 @@ namespace EntranceGate
         {
             if (e.FullImage != null)
             {
-                SetPictureBox(pictureBox1, e.FullImage);
-                SetPictureBox(pictureBox2, e.FaceImage);
+                //SetPictureBox(pictureBox1, e.FullImage);
+                //SetPictureBox(pictureBox2, e.FaceImage);
 
                 Bitmap bitmap = (Bitmap)e.FaceImage.Clone();
                 //change face search from server
@@ -325,7 +439,24 @@ namespace EntranceGate
                 if(faceIdentify_usingAIP(bitmap))
                 {
                     //SetPictureBox(pictureBox2, e.FaceImage);
+                    //PlayWelcomSound(tileBtn.LabelText);
+                    SetPictureBox(pictureBox1, new Bitmap("success.gif"));
+                    SetPictureBox(pictureBox2, e.FaceImage);
+                    SetPictureBoxVisibility(pictureBox2, true);
+                    SetPictureBoxVisibility(loadBox_small, false);
                     PlayWelcomSound(tileBtn.LabelText);
+                    SetMessageLabel(bunifuCustomLabel1, " ");
+                    faceError = 0;
+                }
+                else
+                {
+                    faceError++;
+                    if(faceError > 3)
+                    {
+                        SetMessageLabel(bunifuCustomLabel1, "请尝试使用小程序扫码进店");
+                        PlayErrorSound();
+                        faceError = 0;
+                    }
                 }
             }
         }
@@ -344,7 +475,12 @@ namespace EntranceGate
 
             if(camera.isProcessing == false)
             {
+                SetPictureBox(pictureBox1, new Bitmap("face.gif"));
+                SetPictureBoxVisibility(pictureBox2, false);
+                SetTileButtonVisable(tileBtn, false);
+                SetPictureBoxVisibility(loadBox_small, true);
                 CameraCV.StartProcessOnFrame();
+                SetMessageLabel(bunifuCustomLabel1, "欢迎扫脸进店购物");
             }
         }
 
@@ -386,7 +522,7 @@ namespace EntranceGate
         /// </summary>
         private void OpenGate()
         {
-            pcontroller.SendDoorOpenMessage();
+            pcontroller.SendGateOpenMessage();
             logger.Info("Send open gate command to controller success");
         }
 
@@ -396,7 +532,29 @@ namespace EntranceGate
         /// <param name="welcome"></param>
         private void PlayWelcomSound(string nickname)
         {
-            speech.Tts2Play("欢迎光临吴掌柜，" + nickname);
+            DateTime tmCur = DateTime.Now;
+
+            if (tmCur.Hour < 8 || tmCur.Hour > 18)
+            {
+                speech.Tts2Play("晚上好" + nickname + "欢迎光临物掌柜。");
+            }
+            else if (tmCur.Hour >= 8 && tmCur.Hour < 12)
+            {
+                speech.Tts2Play("上午好" + nickname + "欢迎光临物掌柜。");
+            }
+            else
+            {
+                speech.Tts2Play("下午好" + nickname + "欢迎光临物掌柜。");
+            }
+        }
+
+        /// <summary>
+        /// 播放错误语音
+        /// </summary>
+        /// <param name="error"></param>
+        private void PlayErrorSound()
+        {
+            speech.Tts2Play("请尝试使用小程序扫码进店。");
         }
 
         /// <summary>
@@ -422,6 +580,7 @@ namespace EntranceGate
                 if (userinfo.nickName != string.Empty)
                 {
                     SetTileButton(tileBtn, userinfo);
+                    SetTileButtonVisable(tileBtn, true);
 
                     OpenGate();
 
@@ -430,7 +589,7 @@ namespace EntranceGate
                     APIClient.Log log = new APIClient.Log()
                     {
                         who = userinfo.id,
-                        where = "1"
+                        where = shopid
                     };
 
                     client.VistLogToSystem(log);
@@ -469,6 +628,7 @@ namespace EntranceGate
                     if (userinfo.nickName != string.Empty)
                     {
                         SetTileButton(tileBtn, userinfo);
+                        SetTileButtonVisable(tileBtn, true);
 
                         OpenGate();
 
@@ -477,7 +637,7 @@ namespace EntranceGate
                         APIClient.Log log = new APIClient.Log()
                         {
                             who = userinfo.id,
-                            where = "1"
+                            where = shopid
                         };
 
                         client.VistLogToSystem(log);

@@ -178,8 +178,8 @@ public class CameraCV
                 cam.NewFrame += new NewFrameEventHandler(CaptureNewFrame);
                 ret = true;
 
-                localFaceDetect = true;
-                localFaceDistanceFilter = true;
+                //localFaceDetect = false;
+                //localFaceDistanceFilter = false;
 
                 SetThreshold(100);
             }
@@ -243,23 +243,23 @@ public class CameraCV
                                 faces.Remove(face);
                             }
                         }
-                        if (faces.Count > 0)
-                        {
-                            captureImage = DetectFace.Show(captureImage, faces);
-
-                            //var face = DetectFace.SeprateFace(captureImage, faces);
-                            var face = DetectFace.PickOneBigFace(captureImage, faces);
-
-                            //only raise event when there is close enough face
-                            //OnImageCaptured(new CameraEventArgs(captureImage));
-                            OnFaceCaptured(new CameraFaceEventArgs(captureImage, face));
-                        }
                     }
-                    else
+                    if (faces.Count > 0)
                     {
                         captureImage = DetectFace.Show(captureImage, faces);
+
+                        //var face = DetectFace.SeprateFace(captureImage, faces);
+                        var face = DetectFace.PickOneBigFace(captureImage, faces);
+
+                        //only raise event when there is close enough face
+                        //OnImageCaptured(new CameraEventArgs(captureImage));
+                        OnFaceCaptured(new CameraFaceEventArgs(captureImage, face));
                     }
                 }
+            }
+            else
+            {
+                OnImageCaptured(new CameraEventArgs(captureImage));
             }
 
             //raise the event

@@ -30,8 +30,8 @@
         {
             this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
-            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle7 = new System.Windows.Forms.DataGridViewCellStyle();
-            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle8 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle3 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle4 = new System.Windows.Forms.DataGridViewCellStyle();
             this.bunifuElipse1 = new Bunifu.Framework.UI.BunifuElipse(this.components);
             this.bunifuGradientPanel1 = new Bunifu.Framework.UI.BunifuGradientPanel();
             this.pictureBox2 = new System.Windows.Forms.PictureBox();
@@ -62,6 +62,12 @@
             this.bunifuMetroTextbox1 = new Bunifu.Framework.UI.BunifuMetroTextbox();
             this.timer1 = new System.Windows.Forms.Timer(this.components);
             this.button2 = new System.Windows.Forms.Button();
+            this.pictureBoxAlipay = new System.Windows.Forms.PictureBox();
+            this.pictureBoxWechatpay = new System.Windows.Forms.PictureBox();
+            this.button3 = new System.Windows.Forms.Button();
+            this.genOrderBtn = new System.Windows.Forms.Button();
+            this.confirmBtn = new System.Windows.Forms.Button();
+            this.cancelBtn = new System.Windows.Forms.Button();
             this.bunifuGradientPanel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox2)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
@@ -70,6 +76,8 @@
             this.bunifuGradientPanel2.SuspendLayout();
             this.bunifuGradientPanel3.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.bunifuCustomMerchandiseDataGrid)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.pictureBoxAlipay)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.pictureBoxWechatpay)).BeginInit();
             this.SuspendLayout();
             // 
             // bunifuElipse1
@@ -267,19 +275,19 @@
             // 
             // bunifuCustomMerchandiseDataGrid
             // 
-            dataGridViewCellStyle7.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(224)))), ((int)(((byte)(224)))), ((int)(((byte)(224)))));
-            this.bunifuCustomMerchandiseDataGrid.AlternatingRowsDefaultCellStyle = dataGridViewCellStyle7;
+            dataGridViewCellStyle3.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(224)))), ((int)(((byte)(224)))), ((int)(((byte)(224)))));
+            this.bunifuCustomMerchandiseDataGrid.AlternatingRowsDefaultCellStyle = dataGridViewCellStyle3;
             this.bunifuCustomMerchandiseDataGrid.BackgroundColor = System.Drawing.Color.Gainsboro;
             this.bunifuCustomMerchandiseDataGrid.BorderStyle = System.Windows.Forms.BorderStyle.None;
             this.bunifuCustomMerchandiseDataGrid.ColumnHeadersBorderStyle = System.Windows.Forms.DataGridViewHeaderBorderStyle.None;
-            dataGridViewCellStyle8.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
-            dataGridViewCellStyle8.BackColor = System.Drawing.Color.SeaGreen;
-            dataGridViewCellStyle8.Font = new System.Drawing.Font("Century Gothic", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            dataGridViewCellStyle8.ForeColor = System.Drawing.Color.SeaGreen;
-            dataGridViewCellStyle8.SelectionBackColor = System.Drawing.SystemColors.Highlight;
-            dataGridViewCellStyle8.SelectionForeColor = System.Drawing.SystemColors.HighlightText;
-            dataGridViewCellStyle8.WrapMode = System.Windows.Forms.DataGridViewTriState.True;
-            this.bunifuCustomMerchandiseDataGrid.ColumnHeadersDefaultCellStyle = dataGridViewCellStyle8;
+            dataGridViewCellStyle4.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
+            dataGridViewCellStyle4.BackColor = System.Drawing.Color.SeaGreen;
+            dataGridViewCellStyle4.Font = new System.Drawing.Font("Century Gothic", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            dataGridViewCellStyle4.ForeColor = System.Drawing.Color.SeaGreen;
+            dataGridViewCellStyle4.SelectionBackColor = System.Drawing.SystemColors.Highlight;
+            dataGridViewCellStyle4.SelectionForeColor = System.Drawing.SystemColors.HighlightText;
+            dataGridViewCellStyle4.WrapMode = System.Windows.Forms.DataGridViewTriState.True;
+            this.bunifuCustomMerchandiseDataGrid.ColumnHeadersDefaultCellStyle = dataGridViewCellStyle4;
             this.bunifuCustomMerchandiseDataGrid.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             this.bunifuCustomMerchandiseDataGrid.Dock = System.Windows.Forms.DockStyle.Fill;
             this.bunifuCustomMerchandiseDataGrid.DoubleBuffered = true;
@@ -385,13 +393,77 @@
             this.button2.UseVisualStyleBackColor = true;
             this.button2.Click += new System.EventHandler(this.button2_Click);
             // 
+            // pictureBoxAlipay
+            // 
+            this.pictureBoxAlipay.Location = new System.Drawing.Point(391, 476);
+            this.pictureBoxAlipay.Name = "pictureBoxAlipay";
+            this.pictureBoxAlipay.Size = new System.Drawing.Size(145, 145);
+            this.pictureBoxAlipay.SizeMode = System.Windows.Forms.PictureBoxSizeMode.StretchImage;
+            this.pictureBoxAlipay.TabIndex = 5;
+            this.pictureBoxAlipay.TabStop = false;
+            // 
+            // pictureBoxWechatpay
+            // 
+            this.pictureBoxWechatpay.Location = new System.Drawing.Point(542, 476);
+            this.pictureBoxWechatpay.Name = "pictureBoxWechatpay";
+            this.pictureBoxWechatpay.Size = new System.Drawing.Size(145, 145);
+            this.pictureBoxWechatpay.SizeMode = System.Windows.Forms.PictureBoxSizeMode.StretchImage;
+            this.pictureBoxWechatpay.TabIndex = 6;
+            this.pictureBoxWechatpay.TabStop = false;
+            // 
+            // button3
+            // 
+            this.button3.Location = new System.Drawing.Point(493, 331);
+            this.button3.Name = "button3";
+            this.button3.Size = new System.Drawing.Size(132, 23);
+            this.button3.TabIndex = 3;
+            this.button3.Text = "QR Code";
+            this.button3.UseVisualStyleBackColor = true;
+            this.button3.Click += new System.EventHandler(this.button3_Click);
+            // 
+            // genOrderBtn
+            // 
+            this.genOrderBtn.Location = new System.Drawing.Point(542, 638);
+            this.genOrderBtn.Name = "genOrderBtn";
+            this.genOrderBtn.Size = new System.Drawing.Size(154, 23);
+            this.genOrderBtn.TabIndex = 7;
+            this.genOrderBtn.Text = "GenerateOrder";
+            this.genOrderBtn.UseVisualStyleBackColor = true;
+            this.genOrderBtn.Click += new System.EventHandler(this.genOrderBtn_Click);
+            // 
+            // confirmBtn
+            // 
+            this.confirmBtn.Location = new System.Drawing.Point(525, 695);
+            this.confirmBtn.Name = "confirmBtn";
+            this.confirmBtn.Size = new System.Drawing.Size(75, 23);
+            this.confirmBtn.TabIndex = 8;
+            this.confirmBtn.Text = "Confirm";
+            this.confirmBtn.UseVisualStyleBackColor = true;
+            this.confirmBtn.Click += new System.EventHandler(this.confirmBtn_Click);
+            // 
+            // cancelBtn
+            // 
+            this.cancelBtn.Location = new System.Drawing.Point(621, 695);
+            this.cancelBtn.Name = "cancelBtn";
+            this.cancelBtn.Size = new System.Drawing.Size(75, 23);
+            this.cancelBtn.TabIndex = 9;
+            this.cancelBtn.Text = "Cancel";
+            this.cancelBtn.UseVisualStyleBackColor = true;
+            this.cancelBtn.Click += new System.EventHandler(this.cancelBtn_Click);
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(718, 945);
+            this.Controls.Add(this.cancelBtn);
+            this.Controls.Add(this.confirmBtn);
+            this.Controls.Add(this.genOrderBtn);
+            this.Controls.Add(this.pictureBoxWechatpay);
+            this.Controls.Add(this.pictureBoxAlipay);
             this.Controls.Add(this.bunifuMetroTextbox1);
             this.Controls.Add(this.button1);
+            this.Controls.Add(this.button3);
             this.Controls.Add(this.button2);
             this.Controls.Add(this.test5);
             this.Controls.Add(this.test4);
@@ -415,6 +487,8 @@
             this.bunifuGradientPanel2.PerformLayout();
             this.bunifuGradientPanel3.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.bunifuCustomMerchandiseDataGrid)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.pictureBoxAlipay)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.pictureBoxWechatpay)).EndInit();
             this.ResumeLayout(false);
 
         }
@@ -451,6 +525,12 @@
         private Bunifu.Framework.UI.BunifuMetroTextbox bunifuMetroTextbox1;
         private System.Windows.Forms.Timer timer1;
         private System.Windows.Forms.Button button2;
+        private System.Windows.Forms.PictureBox pictureBoxWechatpay;
+        private System.Windows.Forms.PictureBox pictureBoxAlipay;
+        private System.Windows.Forms.Button button3;
+        private System.Windows.Forms.Button genOrderBtn;
+        private System.Windows.Forms.Button cancelBtn;
+        private System.Windows.Forms.Button confirmBtn;
     }
 }
 

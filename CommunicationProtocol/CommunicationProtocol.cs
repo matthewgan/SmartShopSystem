@@ -17,7 +17,7 @@ public class CommunicationProtocol
         DetectCustomerInRespond,    // PC -> Arduino
 
         CloseDoorCmd,               // PC -> Arduino
-        DoorClosed,                 // Arduino -> PC
+        CloseDoorCmdRespond,        // Arduino -> PC
 
         OpenDoorCmd,                // PC -> Arduino, dir 0: inwards, 1: outwards
         OpenDoorCmdRespond,         // Arduino -> PC
@@ -28,17 +28,12 @@ public class CommunicationProtocol
         ErrorMsg,                   // Arduino -> PC, happens when something strage detected, Eg: No one in the room but sensor trigger
         EmgMsg,                     // Arduino -> PC, when emergency button is pushed
         EmgRelease,                 // Arduino -> PC, when emergency button is released
+        Reset,
 
         OpenGate = 0x41,
         HeartBeatMsg,
 
         DebugMessage = 0xFF,
-    }
-
-    public enum DIRECTION
-    {
-        INWARDS = 0,
-        OUTWARDS = 1,
     }
 
     /// <summary>

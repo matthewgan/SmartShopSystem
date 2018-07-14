@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using System.IO.Ports;
 using System.ComponentModel;
 
-namespace EntranceGate
+namespace CashierCapsule
 {
     class PlatformController
     {
@@ -20,7 +20,7 @@ namespace EntranceGate
         /// </summary>
         public class MsgEventArgs : EventArgs
         {
-            public CommunicationProtocol.DataPacket msg { get; set; }
+            public DataPacket msg { get; set; }
         }
 
         /// <summary>
@@ -37,7 +37,7 @@ namespace EntranceGate
         /// 内部公开方法
         /// </summary>
         /// <param name="msgIn"></param>
-        protected virtual void OnMsgRecieved(CommunicationProtocol.DataPacket msgIn)
+        protected virtual void OnMsgRecieved(DataPacket msgIn)
         {
             if (MsgRecieved != null)
             {
@@ -88,8 +88,12 @@ namespace EntranceGate
             {
                 controlPort.Close();
                 PortListener.DoWork -= PortListener_DoWork;
+                PortListener.CancelAsync();
                 PortListener.Dispose();
-                //PortListener.CancelAsync();
+
+                ///<summary>
+                ///cause dead lock on closing port.
+                /// </summary>
                 //while(PortListener.CancellationPending)
                 //{
                 //    System.Threading.Thread.Sleep(100);
@@ -119,7 +123,7 @@ namespace EntranceGate
             //test function to display any log information from Serial Ports
             List<byte> buffer = new List<byte>();//this gives easy access to handy functions in order to process buffer
             Queue<byte> FIFO_Buffer = new Queue<byte>(); //create FIFO type bufffer
-            CommunicationProtocol.DataPacket packet = new CommunicationProtocol.DataPacket();
+            DataPacket packet = new DataPacket();
             packet.dataReady = false;
             DecodeState currentDecodeState = DecodeState.SearchForHeader1;
             bool ThreadRunning = true;
@@ -141,7 +145,7 @@ namespace EntranceGate
                         {
                             MsgRecieved(this, new MsgEventArgs() { msg = packet });//raise event
                         }
-                        packet = new CommunicationProtocol.DataPacket();
+                        packet = new DataPacket();
                         packet.dataReady = false;
                     }
                 }
@@ -160,7 +164,7 @@ namespace EntranceGate
         /// <param name="dataStream"></param>
         /// <param name="state"></param>
         /// <param name="packet"></param>
-        static public void ProcessData(ref Queue<byte> dataStream, ref DecodeState state, ref CommunicationProtocol.DataPacket packet)
+        static public void ProcessData(ref Queue<byte> dataStream, ref DecodeState state, ref DataPacket packet)
         {
             //Todo Process fifo data stream from headtracking port
             bool stopSerching = false;
@@ -189,7 +193,7 @@ namespace EntranceGate
                         if (dataStream.Count > 0)
                         {
                             byte data = dataStream.Dequeue();
-                            packet.cmdType = (CommunicationProtocol.CMDTYPE)data;
+                            packet.cmdType = (CMDTYPE)data;
                             state = DecodeState.SearchForLen;
                         }
                         break;
@@ -231,7 +235,7 @@ namespace EntranceGate
                             }
                             else
                             {
-                                packet = new CommunicationProtocol.DataPacket();
+                                packet = new DataPacket();
                                 state = DecodeState.SearchForHeader1;
                                 stopSerching = true;
                             }
@@ -247,22 +251,28 @@ namespace EntranceGate
         /// 串口发送消息函数
         /// </summary>
         /// <param name="ct"></param>
-        public void SendMessage(CommunicationProtocol.CMDTYPE ct)
+        public void SendMessage(CMDTYPE ct)
         {
-            CommunicationProtocol.ProtocolMessage sMsg = new CommunicationProtocol.ProtocolMessage(ct);
+            CommunicationMessage sMsg = new CommunicationMessage(ct);
+            if (controlPort.IsOpen)
+            {
+                controlPort.Write(sMsg.MsgFrame, 0, sMsg.MsgTotalLength);
+                //controlPort.BaseStream.Flush();
+            }
+        }        
+
+        /// <summary>
+        /// 发送开门指令到Arduino
+        /// </summary>
+        /// <param name="dir"></param>
+        public void SendOpenDoorMessage(DIRECTION dir)
+        {
+            CommunicationMessage sMsg = new CommunicationMessage(CMDTYPE.OpenDoorCmd, (byte)dir);
             if (controlPort.IsOpen)
             {
                 controlPort.Write(sMsg.MsgFrame, 0, sMsg.MsgTotalLength);
                 controlPort.BaseStream.Flush();
             }
-        }        
-
-        /// <summary>
-        /// 发送闸机开门消息函数
-        /// </summary>
-        public void SendDoorOpenMessage()
-        {
-            SendMessage(CommunicationProtocol.CMDTYPE.OpenGate);
         }
         #endregion SendCommandToFirmware
     }

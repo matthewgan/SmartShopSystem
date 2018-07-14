@@ -15,6 +15,8 @@ public class BaiduSpeech
     private string SECRET_KEY = "ac4UYeO4Tg2a9YwsaLuE0DsDxHyvR2Id";
     Baidu.Aip.Speech.Tts client;
 
+    public Random randomName = new Random();
+
     public BaiduSpeech()
     {
         client = new Baidu.Aip.Speech.Tts(API_KEY, SECRET_KEY);
@@ -33,7 +35,7 @@ public class BaiduSpeech
 
         if (result.ErrorCode == 0)
         {
-            string path = "welcome.mp3";
+            string path = randomName.Next().ToString() + ".mp3";
             File.WriteAllBytes(path, result.Data);
             return path;
         }
@@ -43,7 +45,7 @@ public class BaiduSpeech
 
     public void Play(string filename)
     {
-        if (filename != string.Empty)
+        if ((filename != string.Empty) && (File.Exists(filename)))
         {
             using (var audioFile = new AudioFileReader(filename))
             using (var outputDevice = new WaveOutEvent())
@@ -55,6 +57,8 @@ public class BaiduSpeech
                     System.Threading.Thread.Sleep(1000);
                 }
             }
+
+            File.Delete(filename);
         }
     }
 

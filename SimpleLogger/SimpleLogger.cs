@@ -18,7 +18,8 @@ public class SimpleLogger
 
         // Log file header line
         string logHeader = logFilename + " is created.";
-        if (!System.IO.File.Exists(logFilename))
+
+        if (System.IO.File.Exists(logFilename))
         {
             WriteLine(System.DateTime.Now.ToString(datetimeFormat) + " " + logHeader, false);
         }

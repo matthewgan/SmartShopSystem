@@ -37,6 +37,10 @@ public class APIClient
 
     private string getPayCodeUrl = "api/payment/payOrder/";
 
+    private string checkPaymentResult = "api/payment/offlineQuery/";
+
+    private string cancelPayment = "api/payment/offlineCancel/";
+
     //private string addInfoPath = "api/merchandise/add/";
 
     public static string token;
@@ -107,16 +111,21 @@ public class APIClient
         public string merchandiseID { get; set; }
     }
 
+    public class Tag_EPC
+    {
+        public string EPC { get; set; }
+    }
+
     public class TagInfoList
     {
-        public int totalNum { get; set; }
-        public List<string> EPClist { get; set; }
+        //public int totalNum { get; set; }
+        public List<string> EPC { get; set; }
 
         public TagInfoList()
         {
-            this.totalNum = 0;
-            this.EPClist = new List<string>();
-            this.EPClist.Clear();
+            //this.totalNum = 0;
+            this.EPC = new List<string>();
+            this.EPC.Clear();
         }
     }
 
@@ -154,6 +163,7 @@ public class APIClient
         /// <param name="infos"></param>
         public Order(string uid, MerchandiseInfoCashier[] infos)
         {
+            orderList = new List<order_detail>(infos.Length);
             foreach (MerchandiseInfoCashier info in infos)
             {
                 string m_id = info.id;
@@ -197,8 +207,21 @@ public class APIClient
     public class Payment_Response
     {
         public string status;
+        public string balance;
         public string alipay_code_url;
         public string wechat_pay_code_url;
+    }
+
+    public class Payment_Query_Request
+    {
+        public string user_id;
+        public string trade_no;
+    }
+
+    public class Payment_Query_Response
+    {
+        public string status;
+        public string pay_method;
     }
 
     public APIClient()
@@ -225,26 +248,27 @@ public class APIClient
         byte[] data = Encoding.UTF8.GetBytes(jsonstring);
         request.ContentLength = data.Length;
 
-        //post data
-        using (var stream = request.GetRequestStream())
-        {
-            stream.Write(data, 0, data.Length);
-        }
-
-        //get response
-        WebResponse response = request.GetResponse();
-
-        if (((HttpWebResponse)response).StatusDescription == "OK")
-        {
-            using (var stream = response.GetResponseStream())
-            {
-                StreamReader reader = new StreamReader(stream);
-                responseMessage = reader.ReadToEnd();
-            }
-        }
-
         try
         {
+            //post data
+            using (var stream = request.GetRequestStream())
+            {
+                stream.Write(data, 0, data.Length);
+            }
+
+            //get response
+            WebResponse response = request.GetResponse();
+
+            if (((HttpWebResponse)response).StatusDescription == "OK")
+            {
+                using (var stream = response.GetResponseStream())
+                {
+                    StreamReader reader = new StreamReader(stream);
+                    responseMessage = reader.ReadToEnd();
+                }
+            }
+
+
             Token tok = JsonConvert.DeserializeObject<Token>(responseMessage);
             return tok.token;
         }
@@ -736,14 +760,14 @@ public class APIClient
         var data = Encoding.UTF8.GetBytes(jsonstring);
         request.ContentLength = data.Length;
 
-        //post data
-        using (var stream = request.GetRequestStream())
-        {
-            stream.Write(data, 0, data.Length);
-        }
-
         try
         {
+            //post data
+            using (var stream = request.GetRequestStream())
+            {
+                stream.Write(data, 0, data.Length);
+            }
+
             WebResponse response = request.GetResponse();
 
             if (((HttpWebResponse)response).StatusCode == HttpStatusCode.OK)
@@ -761,9 +785,19 @@ public class APIClient
         }
         catch (Exception ex)
         {
-            return new Payment_Response() { status = "false" };
+            return new Payment_Response() { status = "1" };
         }
-        return new Payment_Response() { status = "false" };
+        return new Payment_Response() { status = "1" };
+    }
+
+    public bool CancelPayment(string trade_no)
+    {
+        return true;
+    }
+
+    public bool CheckPaymentResult(string userid, string trade_no)
+    {
+        return false;
     }
 
     public static void HttpUploadFile(string url, string file, string paramName, string contentType, System.Collections.Specialized.NameValueCollection nvc)
