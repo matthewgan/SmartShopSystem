@@ -96,7 +96,7 @@ public class BaiduFace
 
         var options = new Dictionary<string, object>{
                 {"quality_control", "NORMAL"},
-                {"liveness_control", "NONE"},
+                {"liveness_control", "LOW"},
             };
 
         try

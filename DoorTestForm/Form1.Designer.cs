@@ -39,6 +39,11 @@
             this.openControllerBtn = new System.Windows.Forms.Button();
             this.comboBox1 = new System.Windows.Forms.ComboBox();
             this.richTextBox1 = new System.Windows.Forms.RichTextBox();
+            this.richTextBox2 = new System.Windows.Forms.RichTextBox();
+            this.comboBox2 = new System.Windows.Forms.ComboBox();
+            this.openEncBtn = new System.Windows.Forms.Button();
+            this.closeEncBtn = new System.Windows.Forms.Button();
+            this.sendBtn6 = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // CleanBtn
@@ -140,26 +145,77 @@
             // 
             // richTextBox1
             // 
-            this.richTextBox1.Location = new System.Drawing.Point(12, 38);
+            this.richTextBox1.Location = new System.Drawing.Point(12, 76);
             this.richTextBox1.Name = "richTextBox1";
-            this.richTextBox1.Size = new System.Drawing.Size(582, 481);
+            this.richTextBox1.Size = new System.Drawing.Size(582, 443);
             this.richTextBox1.TabIndex = 15;
             this.richTextBox1.Text = "";
+            // 
+            // richTextBox2
+            // 
+            this.richTextBox2.Location = new System.Drawing.Point(603, 427);
+            this.richTextBox2.Name = "richTextBox2";
+            this.richTextBox2.Size = new System.Drawing.Size(150, 39);
+            this.richTextBox2.TabIndex = 26;
+            this.richTextBox2.Text = "";
+            // 
+            // comboBox2
+            // 
+            this.comboBox2.FormattingEnabled = true;
+            this.comboBox2.Location = new System.Drawing.Point(12, 38);
+            this.comboBox2.Name = "comboBox2";
+            this.comboBox2.Size = new System.Drawing.Size(161, 23);
+            this.comboBox2.TabIndex = 16;
+            // 
+            // openEncBtn
+            // 
+            this.openEncBtn.Location = new System.Drawing.Point(179, 37);
+            this.openEncBtn.Name = "openEncBtn";
+            this.openEncBtn.Size = new System.Drawing.Size(142, 23);
+            this.openEncBtn.TabIndex = 17;
+            this.openEncBtn.Text = "Open Encoder";
+            this.openEncBtn.UseVisualStyleBackColor = true;
+            this.openEncBtn.Click += new System.EventHandler(this.openEncBtn_Click);
+            // 
+            // closeEncBtn
+            // 
+            this.closeEncBtn.Location = new System.Drawing.Point(327, 37);
+            this.closeEncBtn.Name = "closeEncBtn";
+            this.closeEncBtn.Size = new System.Drawing.Size(161, 23);
+            this.closeEncBtn.TabIndex = 18;
+            this.closeEncBtn.Text = "Close Encoder";
+            this.closeEncBtn.UseVisualStyleBackColor = true;
+            this.closeEncBtn.Click += new System.EventHandler(this.closeEncBtn_Click);
+            // 
+            // sendBtn6
+            // 
+            this.sendBtn6.Location = new System.Drawing.Point(603, 341);
+            this.sendBtn6.Name = "sendBtn6";
+            this.sendBtn6.Size = new System.Drawing.Size(153, 47);
+            this.sendBtn6.TabIndex = 24;
+            this.sendBtn6.Text = "Reset Encoder";
+            this.sendBtn6.UseVisualStyleBackColor = true;
+            this.sendBtn6.Click += new System.EventHandler(this.sendBtn6_Click);
             // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(774, 541);
+            this.Controls.Add(this.richTextBox2);
             this.Controls.Add(this.CleanBtn);
+            this.Controls.Add(this.sendBtn6);
             this.Controls.Add(this.sendBtn5);
             this.Controls.Add(this.sendBtn4);
             this.Controls.Add(this.sendBtn3);
             this.Controls.Add(this.sendBtn2);
             this.Controls.Add(this.sendBtn1);
             this.Controls.Add(this.label1);
+            this.Controls.Add(this.closeEncBtn);
             this.Controls.Add(this.closeControllerBtn);
+            this.Controls.Add(this.openEncBtn);
             this.Controls.Add(this.openControllerBtn);
+            this.Controls.Add(this.comboBox2);
             this.Controls.Add(this.comboBox1);
             this.Controls.Add(this.richTextBox1);
             this.Name = "Form1";
@@ -182,6 +238,11 @@
         private System.Windows.Forms.Button openControllerBtn;
         private System.Windows.Forms.ComboBox comboBox1;
         private System.Windows.Forms.RichTextBox richTextBox1;
+        private System.Windows.Forms.RichTextBox richTextBox2;
+        private System.Windows.Forms.ComboBox comboBox2;
+        private System.Windows.Forms.Button openEncBtn;
+        private System.Windows.Forms.Button closeEncBtn;
+        private System.Windows.Forms.Button sendBtn6;
     }
 }
 

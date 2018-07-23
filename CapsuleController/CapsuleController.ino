@@ -136,6 +136,7 @@ void ParseFrameToCommand(uint8_t *frame)
 	case Reset:
 	{
 		door.OpenLetIn();
+		retryTimes = 0;
 		break;
 	}
 
@@ -159,7 +160,7 @@ void SendErrorMsg(ERROR_CODE error_code)
 
 void CloseDoorWithRetry()
 {
-	while ((retryTimes < NumOfRetry) && (door.Close() != Success))
+	while (retryTimes < NumOfRetry && door.Close() != Success)
 	{
 		retryTimes++;
 	}
@@ -167,11 +168,12 @@ void CloseDoorWithRetry()
 	{
 		SendErrorMsg(CloseDoorRetryTooManyTimes);
 		door.motorStop();
+		retryTimes = 0;
 	}
 	else
 	{
 		SendCmdOnlyMsg(CloseDoorCmdRespond);
-retryTimes = 0;
+		retryTimes = 0;
 	}
 }
 

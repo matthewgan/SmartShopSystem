@@ -170,11 +170,10 @@ bool Door::Close()
 		currentDoorState = RotatingOutwards;
 		SetMotorPower(forward, motorFixSpd, 1000);
 		unsigned long timer = millis();
-		while (digitalRead(PosSensorClosed) != ActiveLowTriggered
-			&& (CheckCustomerOnPlatform() == true)
-			//&& EmgTriggered() == false
-			&& digitalRead(IRDoorSensor_Inlet) != ActiveLowTriggered
-			//&& (millis() - timer <= doorRotatingTimeout)
+		while ((CheckCustomerOnPlatform() == true)
+			&& (digitalRead(PosSensorClosed) != ActiveLowTriggered)
+			&& (digitalRead(IRDoorSensor_Inlet) != ActiveLowTriggered)
+			&& (millis() - timer <= doorRotatingTimeout)
 			)
 		{
 			MotorDrive();
@@ -193,9 +192,10 @@ bool Door::Close()
 		currentDoorState = RotatingInwards;
 		SetMotorPower(backwards, motorFixSpd, 1000);
 		unsigned long timer = millis();
-		while (digitalRead(PosSensorClosed) != ActiveLowTriggered
-			&& (CheckCustomerOnPlatform() == false)
-			&& digitalRead(IRDoorSensor_Outlet) != ActiveLowTriggered 
+		while (
+			//(CheckCustomerOnPlatform() == false)
+			(digitalRead(PosSensorClosed) != ActiveLowTriggered)
+			&& (digitalRead(IRDoorSensor_Outlet) != ActiveLowTriggered) 
 			//&& EmgTriggered() == false 
 			//&& (millis() - timer <= doorRotatingTimeout)
 			)
@@ -249,7 +249,7 @@ void Door::ReleaseOutwards()
 
 int Door::ReadWeight() {
 	int load = analogRead(WeightSensor);
-	load = map(load, 0, 255, 0, 300);
+	load = map(load, 0, 255, 0, 1200);
 	return load;
 }
 

@@ -23,6 +23,10 @@ enum CMDTYPE
 	OpenGate = 0x41,
 	HeartBeatMsg,
 
+	ReadEncoderRequest = 0x81,
+	ReadEncoderResponse,
+	ResetEncoder,
+
 	DebugMessage = 0xFF,
 };
 
@@ -108,6 +112,18 @@ struct STRU_MsgReply
 	uint8_t endmark;
 	uint8_t rsv[2];
 };
+
+struct STRU_IntMsg
+{
+	uint8_t header[2];
+	uint8_t cmdtype;
+	uint8_t cmdlength;
+
+	int32_t value;
+
+	uint8_t endmark;
+	uint8_t rsv[3];
+};
 #pragma pack()
 
 void FillReplyIdMsg(STRU_MsgReply* ret, CMDTYPE CT, uint8_t result)
@@ -136,6 +152,16 @@ void FillCmdTypeOnlyMsg(STRU_Msg* ret, CMDTYPE CT)
 	ret->header[1] = FRAMEHEADER2;
 	ret->cmdtype = (uint8_t)CT;
 	ret->cmdlength = 0;
+	ret->endmark = FRAMEEND;
+}
+
+void FillIntMsg(STRU_IntMsg* ret, CMDTYPE CT, int32_t val)
+{
+	ret->header[0] = FRAMEHEADER1;
+	ret->header[1] = FRAMEHEADER2;
+	ret->cmdtype = (uint8_t)CT;
+	ret->cmdlength = 4;
+	ret->value = val;
 	ret->endmark = FRAMEEND;
 }
 

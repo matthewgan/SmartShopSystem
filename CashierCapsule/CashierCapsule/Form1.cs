@@ -34,14 +34,24 @@ namespace CashierCapsule
         SimpleLogger logger;
 
         /// <summary>
-        /// 底层硬件控制器Arduino
+        /// 底层硬件控制器Arduino MEGA
         /// </summary>
         PlatformController pcontroller;
+
+        /// <summary>
+        /// Encoder controller Arduino UNO
+        /// </summary>
+        PlatformController encoder;
 
         /// <summary>
         /// 摄像头处理模块
         /// </summary>
         CameraCV camera;
+
+        /// <summary>
+        /// AIP人脸识别
+        /// </summary>
+        BaiduFace CVclient;
 
         /// <summary>
         /// TTS语音合成
@@ -50,29 +60,61 @@ namespace CashierCapsule
         #endregion Instances of Components
 
         #region 语音合成提示语句
-        string doorClosingHintStr = "正在关门";
-        string doorOpeningHintStr = "正在开门";
-        string emgAlarmHintStr = "紧急按钮已触发,自动门已停止";
-        string emgReleaseHintStr = "紧急按钮已释放,自动门恢复正常";
-        string cameraHintStr = "请正对屏幕和摄像头,即将进行人脸扫描";
-        string paymentHintStr = "请在60秒内完成付款,如您想返回店内,请按右下角取消按钮";
-        string customerWelcomeHintStr = "欢迎光临物掌柜";
-        string customerLeaveHintStr = "离开时请注意下坡间隙,期待您的再次光临";
-        string inverseInterWarningStr = "请离开收银出口，从左侧闸机进去购物区，谢谢您的配合";
-        string cashierStartHintStr = "正在生成您的订单，请稍后";
-        string closeDoorRetryErrorStr = "门总是关不上啊，请收银仓外面的人退后一点";
-        string openDoorInwardRetryErrorStr = "转门朝内打开失败啦";
-        string openDoorOutwardRetryErrorStr = "转门朝外打开失败啦";
-        string codeGenerateFailHintStr = "生成支付码失败啦";
-        string payWithBalanceSuccessHintStr = "储值支付成功";
-        string payWithQRCodeSuccessHintStr = "扫码支付成功";
-        string paymentCanceledHintStr = "支付已取消";
+        private string doorClosingHintStr = "正在关门";
+        private string doorOpeningHintStr = "正在开门";
+        private string emgAlarmHintStr = "紧急按钮已触发,自动门已停止";
+        private string emgReleaseHintStr = "紧急按钮已释放,自动门恢复正常";
+        private string cameraHintStr = "请正对屏幕和摄像头,即将进行人脸扫描";
+        private string paymentHintStr = "请在60秒内完成付款,如您想返回店内,请按右下角取消按钮";
+        private string customerWelcomeHintStr = "欢迎光临物掌柜";
+        private string face_identify_hint_str = "请正视摄像头识别人脸";
+        private string face_identify_error_str = "请正视摄像头重新识别人脸";
+        private string customerLeaveHintStr = "离开时请注意下坡间隙,期待您的再次光临";
+        private string inverseInterWarningStr = "请离开收银出口，从左侧闸机进去购物区，谢谢您的配合";
+        private string cashierStartHintStr = "正在生成您的订单，请稍后";
+        private string closeDoorRetryErrorStr = "门总是关不上啊";
+        private string openDoorInwardRetryErrorStr = "转门朝内打开失败啦";
+        private string openDoorOutwardRetryErrorStr = "转门朝外打开失败啦";
+        private string codeGenerateFailHintStr = "生成支付码失败啦";
+        private string payWithBalanceSuccessHintStr = "储值支付成功";
+        private string payWithQRCodeSuccessHintStr = "扫码支付成功";
+        private string paymentCanceledHintStr = "支付已取消";
 
         // for Debug
         string readerErrorHintStr = "读卡器读取结果超时，请检修读卡器";
         #endregion 语音合成提示语句
 
         #region Global Variables
+        /// <summary>
+        /// encoder读取的累计绝对值
+        /// </summary>
+        private static int lastEncoderValue = 0;
+
+        /// <summary>
+        /// 人脸识别错误次数
+        /// </summary>
+        private int faceError = 0;
+
+        /// <summary>
+        /// 定时刷新picturebox
+        /// </summary>
+        System.Timers.Timer pictureboxRefreshTimer;
+
+        /// <summary>
+        /// 定时刷新faceError
+        /// </summary>
+        System.Timers.Timer faceErrorResetTimer;
+
+        /// <summary>
+        /// 固定店铺ID
+        /// </summary>
+        static string shopid = "1";
+
+        /// <summary>
+        /// 读卡器天线功率: 0-33(0x00-0x21)
+        /// </summary>
+        static byte output_power = 29;
+
         /// <summary>
         /// StateMachine全局变量
         /// </summary>
@@ -98,6 +140,9 @@ namespace CashierCapsule
         /// </summary>
         private static int counter;
 
+        /// <summary>
+        /// 生成订单号全局变量
+        /// </summary>
         private static string lastTradeNo;
 
         /// <summary>
@@ -125,6 +170,35 @@ namespace CashierCapsule
         #endregion Global Variables
 
         #region Delegate Methods
+        /// <summary>
+        /// status toolbar委托代理
+        /// </summary>
+        /// <param name="status"></param>
+        /// <param name="label"></param>
+        /// <param name="text"></param>
+        delegate void setToolStatusBar(StatusStrip status, ToolStripStatusLabel label, string text);
+
+        /// <summary>
+        /// status toolbar委托赋值函数
+        /// </summary>
+        /// <param name="status"></param>
+        /// <param name="label"></param>
+        /// <param name="text"></param>
+        private void SetToolStatusBar(StatusStrip status, ToolStripStatusLabel label, string text)
+        {
+            if(status.InvokeRequired)
+            {
+                setToolStatusBar setThis = new setToolStatusBar(SetToolStatusBar);
+
+                status.Invoke(setThis, status, label, text);
+            }
+            else
+            {
+                label.Text = text;
+                status.Refresh();
+            }
+        }
+
         /// <summary>
         /// RichTextBox委托赋值
         /// </summary>
@@ -271,6 +345,58 @@ namespace CashierCapsule
             }
         }
 
+        /// <summary>
+        /// tilebuttonVisable委托赋值
+        /// </summary>
+        /// <param name="button"></param>
+        /// <param name="isVisiable"></param>
+        delegate void setTileButtonVisiable(Bunifu.Framework.UI.BunifuTileButton button, bool isVisiable);
+
+        /// <summary>
+        /// tilebuttonVisiable委托赋值函数
+        /// </summary>
+        /// <param name="tileButton"></param>
+        /// <param name="isVisable"></param>
+        private void SetTileButtonVisable(Bunifu.Framework.UI.BunifuTileButton tileButton, bool isVisiable)
+        {
+            if (tileButton.InvokeRequired)
+            {
+                setTileButtonVisiable setThis = new setTileButtonVisiable(SetTileButtonVisable);
+
+                tileButton.Invoke(setThis, tileButton, isVisiable);
+            }
+            else
+            {
+                tileButton.Visible = isVisiable;
+            }
+        }
+
+        /// <summary>
+        /// PictureBoxVisible委托赋值
+        /// </summary>
+        /// <param name="box"></param>
+        /// <param name="isVisiable"></param>
+        delegate void setPictureBoxVisibility(PictureBox box, bool isVisiable);
+
+        /// <summary>
+        /// PictureBoxVisible委托赋值函数
+        /// </summary>
+        /// <param name="box"></param>
+        /// <param name="isVisiable"></param>
+        private void SetPictureBoxVisibility(PictureBox box, bool isVisiable)
+        {
+            if (box.InvokeRequired)
+            {
+                setPictureBoxVisibility setThis = new setPictureBoxVisibility(SetPictureBoxVisibility);
+
+                box.Invoke(setThis, box, isVisiable);
+            }
+            else
+            {
+                box.Visible = isVisiable;
+            }
+        }
+
         #endregion Delegate Methods
 
         /// <summary>
@@ -290,18 +416,25 @@ namespace CashierCapsule
             //2.open the platform controller
             pcontroller = new PlatformController();
             //comment when dont have controller connected
-            //OpenController("COM3");
+            OpenController("COM3");
+
+            //addtional encoder controller
+            encoder = new PlatformController();
+            OpenEncoderController("COM5");
 
             //3.open the UHF reader 
             reader = new ReaderMethod();
             //comment when dont have reader connected
-            //OpenUHFReader("COM4");
+            OpenUHFReader("COM4");
+            //read antenna power
+
+
 
             //4.request token from server
             //comment when the internet is off
             client = new APIClient();
 
-            //5.Open the camera
+            //5.Open the camera and AIP
             camera = new CameraCV();
             //adjust the camera device name in init
             if (camera.Init("C922"))
@@ -314,25 +447,43 @@ namespace CashierCapsule
                 logger.Error("Open Camera fail, please check the USB cable.");
             }
 
+            //调试用，直接对接百度API
+            CVclient = new BaiduFace();
+
             //6.Init the speech TTS from baidu
             speech = new BaiduSpeech();
 
             //7.Reset the arduino to initial state
-            //pcontroller.SendMessage(CommunicationProtocol.CMDTYPE.Reset);
+            pcontroller.SendMessage(CommunicationProtocol.CMDTYPE.Reset);
 
             //Thread.Sleep(15000); //wait 15s to finish reset
+            UpdateStateMachine(Stages.IDLE);
 
             //pictureBoxWelcome is for show image when no one in the cashier
             //set to false when debugging
             pictureBoxWelcome.Visible = false;
+
+            //setup a timer to reduce time cost on face identify
+            pictureboxRefreshTimer = new System.Timers.Timer();
+            pictureboxRefreshTimer.Interval = 1000;
+            pictureboxRefreshTimer.Elapsed += new System.Timers.ElapsedEventHandler(CameraFastRefresh);
+            pictureboxRefreshTimer.AutoReset = true;
+
+            //启动timer，周期刷新faceError
+            faceErrorResetTimer = new System.Timers.Timer();
+            faceErrorResetTimer.Elapsed += new System.Timers.ElapsedEventHandler(faceErrorReset);
+            faceErrorResetTimer.AutoReset = true;
+            faceErrorResetTimer.Interval = 10000;
+            faceErrorResetTimer.Start();
         }
 
+        #region Camera
         /// <summary>
         /// 打开摄像头
         /// </summary>
         private void OpenCamera()
         {
-            //camera.ImageCaptured += ShowFaceInPictureBox;
+            camera.ImageCaptured += ShowImageInPictureBox;
             camera.FaceCaptured += ShowFaceInPictureBox;
             camera.localFaceDetect = true;
             camera.localFaceDistanceFilter = false;
@@ -355,12 +506,35 @@ namespace CashierCapsule
         }
 
         /// <summary>
+        /// 刷新faceError,超时清零
+        /// </summary>
+        private void faceErrorReset(object sender, EventArgs e)
+        {
+            faceError = 0;
+            faceErrorResetTimer.Close();
+        }
+
+        /// <summary>
+        /// 实时在picturebox中显示摄像头捕获图像
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void ShowImageInPictureBox(object sender, CameraCV.CameraEventArgs e)
+        {
+            if (e.Image != null)
+            {
+                SetPictureBox(pictureBoxAlwaysOn, e.Image);
+            }
+        }
+
+        /// <summary>
         /// 收到摄像头event事件调用函数
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
         private void ShowFaceInPictureBox(object sender, CameraCV.CameraFaceEventArgs e)
         {
+#if false
             if (e.FullImage != null)
             {
                 SetPictureBox(pictureBox1, e.FullImage);
@@ -388,8 +562,109 @@ namespace CashierCapsule
                     logger.Error("Camera Event search faces failed, exception: " + ex.ToString());
                 }
             }
+#else
+            if (e.FaceImage != null)
+            {
+                Bitmap bitmap = (Bitmap)e.FaceImage.Clone();
+                //change face search from server
+                //if (faceIdentify(bitmap))
+                if (faceIdentify_usingAIP(bitmap))
+                {
+                    //play welcome sound with nickname
+                    //PlayWelcomSound(bunifuTileButtonFace.LabelText);
+
+                    SetPictureBox(pictureBoxFace, e.FaceImage);
+                    SetPictureBoxVisibility(pictureBoxFace, true);
+
+                    faceError = 0;
+
+                    //stop the refresh timer
+                    pictureboxRefreshTimer.Stop();
+
+                    //update state machine
+                    UpdateStateMachine(Stages.CloseDoor);
+                }
+                else
+                {
+                    SetPictureBoxVisibility(pictureBoxFace, false);
+                    faceError++;
+                    if (faceError > 3)
+                    {
+                        PlayErrorSound();
+                        faceError = 0;
+                    }
+                }
+            }
+#endif
         }
 
+        /// <summary>
+        /// 刷脸识别流程处理，直接调用aip节省阿里云流量费用
+        /// </summary>
+        /// <param name="bmap"></param>
+        /// <returns></returns>
+        private bool faceIdentify_usingAIP(Bitmap bmap)
+        {
+            bool ret = false;
+
+            var result = CVclient.face_search_using_aip(bmap);
+            logger.Info("Get Face search return message : " + result.ToString());
+            if (result.GetValue("error_code").ToString() != "0")
+            {
+                ret = false;
+            }
+            else
+            {
+                var score = result["result"]["user_list"][0]["score"];
+                double valid = Convert.ToDouble(score.ToString());
+                if (valid >= 90)
+                {
+                    var id = result["result"]["user_list"][0]["user_id"];
+                    APIClient.ID uid = new APIClient.ID() { id = id.ToString() };
+
+                    APIClient.UserInfo userinfo = client.GetUserInfo(uid);
+
+                    if (userinfo.nickName != string.Empty)
+                    {
+                        SetTileButton(bunifuTileButtonFace, userinfo);
+                        SetTileButtonVisable(bunifuTileButtonFace, true);
+
+                        PlayWelcomSound(userinfo.nickName);
+
+                        APIClient.Log log = new APIClient.Log()
+                        {
+                            who = userinfo.id,
+                            where = shopid
+                        };
+
+                        client.VistLogToSystem(log);
+                        ret = true;
+                    }
+                }
+            }
+            return ret;
+        }
+
+        /// <summary>
+        /// 刷新picturebox任务，在timer中调用
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void CameraFastRefresh(object sender, EventArgs e)
+        {
+            if (camera.isOpen == false)
+            {
+                return;
+            }
+
+            if (camera.isProcessing == false)
+            {
+                CameraCV.StartProcessOnFrame();
+            }
+        }
+        #endregion Camera
+
+        #region UHFReader
         /// <summary>
         /// Open UHF Reader
         /// </summary>
@@ -423,6 +698,32 @@ namespace CashierCapsule
                 string strLog = "Connect UHF reader serialport success";
                 logger.Info(strLog);
             }
+
+            if(SetWorkAntennas()!=true)
+            {
+                logger.Error("Set UHF reader working atennas failed");
+            }
+
+            byte pow = 29;
+            if (SetOutputPower(output_power)!=true)
+            {
+                logger.Error("Set UHF reader output power failed!");
+            }
+        }
+
+        private bool SetWorkAntennas()
+        {
+            return (reader.SetWorkAntenna(0xff, 0x00) == 0) && (reader.SetWorkAntenna(0xff, 0x01) == 0);
+        }
+
+        private bool SetOutputPower(byte power)
+        {
+            byte val = power;
+            if(val > 0x21)
+            {
+                val = 0x21;
+            }
+            return (reader.SetOutputPower(0xff, val) == 0);
         }
 
         /// <summary>
@@ -495,7 +796,9 @@ namespace CashierCapsule
             reader.GetAndResetInventoryBuffer((byte)0xff);
             //logger.Info("Stop Inventory message sent");
         }
+        #endregion UHFReader
 
+        #region Arduino Main Controller
         /// <summary>
         /// Open serial port of the arduino controller
         /// </summary>
@@ -540,25 +843,6 @@ namespace CashierCapsule
         }
 
         /// <summary>
-        /// convert url to QR code and show image on picturebox for scan
-        /// </summary>
-        /// <param name="alipay_url"></param>
-        /// <param name="wechatpay_url"></param>
-        private void ShowQRCode(string alipay_url, string wechatpay_url)
-        {
-            Bitmap amap = BarcodeGenerator.GenerateQRCode(alipay_url, "支付宝");
-            Bitmap bmap = BarcodeGenerator.GenerateQRCode(wechatpay_url, "微信支付");
-
-            Point p = new Point(0, 25);
-            Size s = new Size(145, 145);
-
-            //pictureBoxAlipay.Image = CropImage(amap, new Rectangle(p, s));
-            //pictureBoxWechatpay.Image = CropImage(bmap, new Rectangle(p, s));
-            SetPictureBox(pictureBoxAlipay, CropImage(amap, new Rectangle(p, s)));
-            SetPictureBox(pictureBoxWechatpay, CropImage(bmap, new Rectangle(p, s)));
-        }
-
-        /// <summary>
         /// process on messages recieved from the serial port
         /// </summary>
         /// <param name="sender"></param>
@@ -585,6 +869,9 @@ namespace CashierCapsule
                 case CommunicationProtocol.CMDTYPE.DetectCustomerIn:
                     {
                         //because multiple detect customer inside will be raised
+                        //Send response message to arduino
+                        pcontroller.SendMessage(CommunicationProtocol.CMDTYPE.DetectCustomerInRespond);
+
                         //only update state machine when system is idle
                         if (currentStage == Stages.IDLE)
                         {
@@ -604,7 +891,7 @@ namespace CashierCapsule
                         {
                             UpdateStateMachine(Stages.DoCashier);
                         }
-                        else if(currentStage == Stages.WaitForDoorClosedWithNobodyInside)
+                        else if (currentStage == Stages.WaitForDoorClosedWithNobodyInside)
                         {
                             UpdateStateMachine(Stages.OpenDoorToInward);
                         }
@@ -636,22 +923,25 @@ namespace CashierCapsule
                     }
                 case CommunicationProtocol.CMDTYPE.DetectCustomerOut:
                     {
-                        if (currentStage == Stages.WaitForCustomerLeave)
+                        //send response to arduino here because receive too many
+                        pcontroller.SendMessage(CommunicationProtocol.CMDTYPE.DetectCustomerOutRespond);
+
+                        if ((currentStage == Stages.WaitForCustomerLeave) || (currentStage == Stages.OpenDoorToOutward))
                         {
                             UpdateStateMachine(Stages.CloseDoorWithNobodyInside);
                         }
-                        else
-                        {
-                            logger.Error("Receieve Controller Message: CMDTYPE " + Enum.GetName(typeof(CommunicationProtocol.CMDTYPE), ct)
-                                + "Except current stage is WaitForCustomerLeave, But current stage is "
-                                + Enum.GetName(typeof(Stages), currentStage));
-                        }
+                        //else
+                        //{
+                        //    logger.Error("Receieve Controller Message: CMDTYPE " + Enum.GetName(typeof(CommunicationProtocol.CMDTYPE), ct)
+                        //        + "Except current stage is WaitForCustomerLeave, But current stage is "
+                        //        + Enum.GetName(typeof(Stages), currentStage));
+                        //}
                         break;
                     }
                 case CommunicationProtocol.CMDTYPE.DebugMessage:
                     {
                         break;
-                    }    
+                    }
                 case CommunicationProtocol.CMDTYPE.EmgMsg:
                     {
                         logger.Warning("Recieve Emergence Message, Into Emergence Process...");
@@ -673,35 +963,39 @@ namespace CashierCapsule
 
                         break;
                     }
-                default:break;
+                default: break;
             }
         }
 
+        /// <summary>
+        /// process on error messages recieved from the serial port
+        /// </summary>
+        /// <param name="code"></param>
         private void ErrorMessageHandler(PlatformController.ERROR_CODE code)
         {
-            switch(code)
+            switch (code)
             {
                 case PlatformController.ERROR_CODE.CloseDoorRetryTooManyTimes:
                     {
                         //play some notify sound
                         if (currentStage == Stages.WaitForDoorClosedWithNobodyInside)
                         {
-                            speech.Tts2Play(inverseInterWarningStr);
+                            //speech.Tts2Play(inverseInterWarningStr);
                             //retry close door
                             UpdateStateMachine(Stages.CloseDoorWithNobodyInside);
                         }
-                        else if (currentStage == Stages.WaitForDoorClosed) 
+                        else if (currentStage == Stages.WaitForDoorClosed)
                         {
                             speech.Tts2Play(closeDoorRetryErrorStr);
                             //retry close door
                             UpdateStateMachine(Stages.CloseDoor);
                         }
-                        
+
                         break;
                     }
                 case PlatformController.ERROR_CODE.GetDetectCustomerInResponseRetryTooManyTimes:
                 case PlatformController.ERROR_CODE.GetDetectCustomerOutResponseRetryTooManyTimes:
-                    {       
+                    {
                         //when this error happends, this program should not be alive
 
                         break;
@@ -720,43 +1014,118 @@ namespace CashierCapsule
 
                         break;
                     }
+                default: break;
+            }
+        }
+        #endregion Arduino Main Controller
+
+        #region Arduino Encoder
+        private void OpenEncoderController(string portname)
+        {
+            if (portname == string.Empty)
+            {
+                return;
+            }
+            try
+            {
+                encoder.Open(portname, 9600);
+                encoder.MsgRecieved += ProcessEncoderMessage;
+                logger.Info("Open Encoder Controller Success");
+            }
+            catch (Exception ex)
+            {
+                logger.Error("Open Encoder Controller Failed: " + ex.ToString());
+            }
+        }
+
+        private void ProcessEncoderMessage(object sender, PlatformController.MsgEventArgs e)
+        {
+            CommunicationProtocol.CMDTYPE ct = e.msg.cmdType;
+
+            switch (ct)
+            {
+                case CommunicationProtocol.CMDTYPE.EncoderUpdate:
+                    {
+                        lastEncoderValue = BitConverter.ToInt32(e.msg.payload, 0);
+                        SetToolStatusBar(statusStrip1, encoderStatusValue, lastEncoderValue.ToString());
+                        logger.Info("Recevied Encoder Value: " + lastEncoderValue.ToString());
+                        break;
+                    }
                 default:break;
             }
         }
 
-        #region StateMachine
-        /// <summary>
-        /// Normal process: 
-        ///     IDEL -> Customer Inside (Receieve Notify From Arduino, auto response) 
-        ///     -> Close the door (Send command, Start Inventory)
-        ///     -> Wait for the door closed (Receieve Notify From Arduino)
-        ///     -> Do Cashier (Get Inventory Result, Request Merchandise Info, Generate Order and Show on Screen)
-        ///     -> Wait Customer to Finish Payment (Autopay with balance, otherwise generate alipay and wechat pay QRcode on Screen)
-        ///     -> Open Door to Outwards (Send message to Arduino)
-        ///     -> Wait Customer to go outside (Receieve Notify From Arduino)
-        ///     -> Open Door to Inwards (Send message to Arduino)
-        ///     -> IDLE
-        /// Emergence process:
-        ///     Any Stage -> Emergence Happend (Receieve Emergence Message From Arduino)
-        ///     -> Emergence Handling (Alarm in the shop, If payment is finished Let Customer Go Outwards, otherwise Inwards)
-        ///     -> Open Door Inwards or Outwards depend on Payment Status
-        ///     -> Freeze the system until Emergence Button is Released (Receieve Emergence Cancel Message From Arduino)
-        ///     -> Open Door to Inwards (Reset the Alarm)
-        ///     -> IDLE
-        /// Error process: 
-        ///     (Debug situation)
-        ///     Any stage -> Error Happend （Receieve Error Message From Arduino）
-        ///     -> Freeze the system until Reset (For Debugging)
-        ///     (Working situation)
-        ///     Any stage -> Error Happend (Only record error message to LOGGER)
-        /// </summary>
+        private void CloseEncoderController()
+        {
+            try
+            {
+                encoder.Close();
+                logger.Info("Close Firmware Controller Success");
+            }
+            catch (Exception ex)
+            {
+                logger.Error("Close Firmware Contronller Failed: " + ex.ToString());
+            }
+        }
 
-        // State Machine Stages Definations
+        private void ClearEncoderAbsValue()
+        {
+            encoder.SendMessage(CommunicationProtocol.CMDTYPE.ResetEncoder);
+            lastEncoderValue = 0;
+        }
+
+        #endregion Arduino Encoder
+
+        #region QRCODE
+        /// <summary>
+        /// cut spire logo from the generated QR code
+        /// </summary>
+        /// <param name="source"></param>
+        /// <param name="section"></param>
+        /// <returns></returns>
+        public Bitmap CropImage(Bitmap source, Rectangle section)
+        {
+            // An empty bitmap which will hold the cropped image
+            Bitmap bmp = new Bitmap(section.Width, section.Height);
+
+            Graphics g = Graphics.FromImage(bmp);
+
+            // Draw the given area (section) of the source image
+            // at location 0,0 on the empty bitmap (bmp)
+            g.DrawImage(source, 0, 0, section, GraphicsUnit.Pixel);
+
+            return bmp;
+        }
+
+        /// <summary>
+        /// convert url to QR code and show image on picturebox for scan
+        /// </summary>
+        /// <param name="alipay_url"></param>
+        /// <param name="wechatpay_url"></param>
+        private void ShowQRCode(string alipay_url, string wechatpay_url)
+        {
+            Bitmap amap = BarcodeGenerator.GenerateQRCode(alipay_url, "支付宝");
+            Bitmap bmap = BarcodeGenerator.GenerateQRCode(wechatpay_url, "微信支付");
+
+            Point p = new Point(0, 25);
+            Size s = new Size(145, 145);
+
+            SetPictureBox(pictureBoxAlipay, CropImage(amap, new Rectangle(p, s)));
+            SetPictureBox(pictureBoxWechatpay, CropImage(bmap, new Rectangle(p, s)));
+        }
+        #endregion QRCODE
+
+        #region StateMachine
+
+        /// <summary>
+        /// State Machine Stages Definations
+        /// </summary>
         public enum Stages
         {
             IDLE = 0,
 
             CustomerInside,
+            FaceRecognize,
             CloseDoor,
             WaitForDoorClosed,
             DoCashier,
@@ -770,7 +1139,6 @@ namespace CashierCapsule
             OpenDoorToInward,
 
             EmergenceAlarm,
-            EmergenceProcessing,
             EmergenceRelease,
 
             ErrorDebug,
@@ -784,31 +1152,41 @@ namespace CashierCapsule
         {
             currentStage = newStage;
 
-
+            //refresh state machine stage to status bar
+            SetToolStatusBar(statusStrip1, doorStateValue, Enum.GetName(typeof(Stages), currentStage));
 
             switch (currentStage)
             {
                 case Stages.IDLE:
                     {
+                        //clear last status
+                        ClearLastUser();
+                        ClearLastScan();
+
+                        SetPictureBoxVisibility(pictureBoxFace, false);
+                        SetTileButtonVisable(bunifuTileButtonFace, false);
+
+                        //ClearEncoderAbsValue();
                         break;
                     }
                 case Stages.CustomerInside://raised by arduino message
                     {
-                        speech.Tts2Play(customerWelcomeHintStr);
-
-                        //Open camera to do facial recognition
-                        ClearLastUser();
-                        CameraCV.StartProcessOnFrame();
-                        //will automatically stop when customer is recognized
-
-                        //Send response message to arduino
-                        pcontroller.SendMessage(CommunicationProtocol.CMDTYPE.DetectCustomerInRespond);
+                        speech.Tts2Play(face_identify_hint_str);
 
                         //move on to next stage
-                        UpdateStateMachine(Stages.CloseDoor);
+                        UpdateStateMachine(Stages.FaceRecognize);
                         break;
                     }
-                case Stages.CloseDoor://raised by state machine
+                case Stages.FaceRecognize:
+                    {
+                        //Open camera to do facial recognition
+                        //CameraCV.StartProcessOnFrame();
+                        //启动timer，周期刷新picturebox
+                        pictureboxRefreshTimer.Start();
+                        //will automatically stop when customer is recognized
+                        break;
+                    }
+                case Stages.CloseDoor://raised by face identify
                     {
                         //alarm the door will closing
                         speech.Tts2Play(doorClosingHintStr);
@@ -839,20 +1217,7 @@ namespace CashierCapsule
                     }
                 case Stages.WaitForScannerReport:
                     {
-                        //start a timer to recieve response from serialport
-                        Stopwatch timeout = new Stopwatch();
-                        timeout.Start();
-
-                        while(lastScanTagCount == -1)
-                        {
-                            if(timeout.ElapsedMilliseconds >= 5000)
-                            {
-                                timeout.Stop();
-                                logger.Error("UHF Reader didnt recieve tag count response, Timeout !!!");
-                                break;
-                            }
-                        }
-                        timeout.Reset();
+                        CheckScanTagCountWithTimeout();
 
                         if (lastScanTagCount == -1)
                         {
@@ -873,20 +1238,9 @@ namespace CashierCapsule
                             //stop Inventory and get the result
                             StopIventoryAndGetResults();
 
-                            //start a timer to deal with timeout
-                            //timeout.Reset();
-                            timeout.Start();
-
-                            //waiting for the reader to report all the result
-                            while(lastScanTagList.EPC.Count < lastScanTagCount)
-                            {
-                                if (timeout.ElapsedMilliseconds >= 5000)
-                                {
-                                    timeout.Stop();
-                                    logger.Error("UHF Reader didnt recieve enough number tags response, Timeout !!!");
-                                    break;
-                                }
-                            }
+                            CheckScanTagDetailWithTimeout();
+                            
+                            speech.Tts2Play("检测到" + lastScanTagList.EPC.Count.ToString() + "个标签");
 
                             UpdateStateMachine(Stages.GenerateOrder);
                         }                        
@@ -901,21 +1255,14 @@ namespace CashierCapsule
                         if ((infos.Count() == 1) && (infos[0].id == string.Empty))
                         {
                             logger.Error("UHF Reader scan tag existed, but cannot query any merchandise info from server !!!");
+                            speech.Tts2Play("奇怪，检测到的标签不在库里");
                         }
                         else
                         {
                             //show on screen
                             SetDataGridViewInfo(bunifuCustomMerchandiseDataGrid, infos);
                             //generate order request
-                            string userid = string.Empty;
-                            if(lastUserinfo.id == string.Empty)
-                            {
-
-                            }
-                            else
-                            {
-                                userid = lastUserinfo.id;
-                            }
+                            string userid = lastUserinfo.id;
                             APIClient.Order order = new APIClient.Order(userid, infos);
                             //generate order online
                             lastTradeNo = client.CreateOrderNo(order);
@@ -978,6 +1325,7 @@ namespace CashierCapsule
                             }
                             else
                             {
+                                timer1.Stop();
                                 //should be equal to cancel button pressed
                                 this.cancelBtn_Click(this, new EventArgs());
                             }
@@ -1000,19 +1348,6 @@ namespace CashierCapsule
                                 //do nothing, continue check working with timer
                             }
                         }
-
-                        //if ()//payment is finished
-                        //{
-                        //    UpdateStateMachine(Stages.OpenDoorToOutward);
-                        //}
-                        //else if()//payment is canceled
-                        //{
-                        //    UpdateStateMachine(Stages.OpenDoorToInward);
-                        //}
-                        //else//if timeout and user want to keep waiting for payment
-                        //{
-                        //    UpdateStateMachine(Stages.WaitForPaymentFinish);
-                        //}
                         break;
                     }
                 case Stages.OpenDoorToOutward://raised by state machine
@@ -1039,8 +1374,6 @@ namespace CashierCapsule
                     }
                 case Stages.CloseDoorWithNobodyInside://raised by arduino detect customer out message
                     {
-                        //send response to arduino
-                        pcontroller.SendMessage(CommunicationProtocol.CMDTYPE.DetectCustomerOutRespond);
                         //try to close the door
                         pcontroller.SendCloseDoorMessage();
                         UpdateStateMachine(Stages.WaitForDoorClosedWithNobodyInside);
@@ -1053,40 +1386,62 @@ namespace CashierCapsule
                     }
                 case Stages.OpenDoorToInward://raised by arduino close door response message
                     {
-                        //alarm the door will closing
-                        speech.Tts2Play(doorClosingHintStr);
-
                         pcontroller.SendOpenDoorMessage(PlatformController.DIRECTION.INWARDS);
                         break;
                     }
-
                 case Stages.EmergenceAlarm://raised by arduino emergence message
                     {
-                        //play alarm sound effect
-                        //TODO
-                        //speech.Tts2Play(emgAlarmHintStr);
-
-                        UpdateStateMachine(Stages.EmergenceProcessing);
-
-                        break;
-                    }
-                case Stages.EmergenceProcessing:
-                    {
-                        //showing emergence info on the screen
-                        //guide customer how to handle this
-
                         break;
                     }
                 case Stages.EmergenceRelease://should raise by the emergence button is released
                     {
-                        //recover the whole system
-                        //speech.Tts2Play(emgReleaseHintStr);
-
                         break;
                     }
             }
         }
 
+        private void CheckScanTagCountWithTimeout()
+        {
+            //start a timer to recieve response from serialport
+            Stopwatch timeout = new Stopwatch();
+            timeout.Start();
+
+            while (lastScanTagCount == -1)
+            {
+                if (timeout.ElapsedMilliseconds >= 5000)
+                {
+                    timeout.Stop();
+                    logger.Error("UHF Reader didnt recieve tag count response, Timeout !!!");
+                    break;
+                }
+            }
+            timeout.Stop();
+        }
+
+        private void CheckScanTagDetailWithTimeout()
+        {
+            //start a timer to deal with timeout
+            Stopwatch timeout = new Stopwatch();
+            timeout.Start();
+
+            //waiting for the reader to report all the result
+            while (lastScanTagList.EPC.Count < lastScanTagCount)
+            {
+                if (timeout.ElapsedMilliseconds >= 5000)
+                {
+                    timeout.Stop();
+                    logger.Error("UHF Reader didnt recieve enough number tags response, Timeout !!!");
+                    break;
+                }
+            }
+            timeout.Stop();
+        }
+
+        /// <summary>
+        /// countdown timer for payment timeout
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void Timer1_Tick(object sender, EventArgs e)
         {
             if(counter > 0)
@@ -1116,49 +1471,7 @@ namespace CashierCapsule
             CloseController();
         }
 
-        private void test1_Click(object sender, EventArgs e)
-        {
-            //simulate arduino send customer inside message
-            UpdateStateMachine(Stages.CustomerInside);
-        }
-
-        private void test2_Click(object sender, EventArgs e)
-        {
-            UpdateStateMachine(Stages.DoCashier);
-        }
-
-        private void test3_Click(object sender, EventArgs e)
-        {
-            UpdateStateMachine(Stages.CloseDoorWithNobodyInside);
-        }
-
-        private void test4_Click(object sender, EventArgs e)
-        {
-            UpdateStateMachine(Stages.IDLE);
-        }
-
-        private void test5_Click(object sender, EventArgs e)
-        {
-            UpdateStateMachine(Stages.EmergenceAlarm);
-            
-        }
-
-        private void button1_Click(object sender, EventArgs e)
-        {
-            UpdateStateMachine(Stages.EmergenceRelease);
-        }
-
-        private void button2_Click(object sender, EventArgs e)
-        {
-            counter = 5;
-            SetLabelText(bunifuMetroTextbox1, counter.ToString());
-            speech.Tts2Play(paymentHintStr);
-
-            timer1.Tick += Timer1_Tick;
-            timer1.Start();
-
-            UpdateStateMachine(Stages.WaitForPaymentFinish);
-        }
+        
 
         private void button3_Click(object sender, EventArgs e)
         {
@@ -1167,27 +1480,14 @@ namespace CashierCapsule
             ShowQRCode(test1, test2);
         }
 
-        public Bitmap CropImage(Bitmap source, Rectangle section)
-        {
-            // An empty bitmap which will hold the cropped image
-            Bitmap bmp = new Bitmap(section.Width, section.Height);
-
-            Graphics g = Graphics.FromImage(bmp);
-
-            // Draw the given area (section) of the source image
-            // at location 0,0 on the empty bitmap (bmp)
-            g.DrawImage(source, 0, 0, section, GraphicsUnit.Pixel);
-
-            return bmp;
-        }
 
         private void genOrderBtn_Click(object sender, EventArgs e)
         {
             APIClient.TagInfoList testList = new APIClient.TagInfoList();
             //testList.totalNum = 3;
-            testList.EPC.Add("E2806890000000022CD34306");
-            testList.EPC.Add("E2806890000000022CD35126");
-            testList.EPC.Add("E2806890000000022CD341EE");
+            testList.EPC.Add("E2806890000000022CD45865");
+            testList.EPC.Add("E2806890000000022CD45873");
+            testList.EPC.Add("E2806890000000022CD458C5");
             //testList.EPC.Add(new APIClient.Tag_EPC() { EPC = "E2806890000000022CD34306" });
             //testList.EPC.Add(new APIClient.Tag_EPC() { EPC = "E2806890000000022CD35126" });
             //testList.EPC.Add(new APIClient.Tag_EPC() { EPC = "E2806890000000022CD341EE" });
@@ -1197,13 +1497,25 @@ namespace CashierCapsule
             string tradeNo = client.CreateOrderNo(order);
             //get qr code url from wechatpay and alipay
             APIClient.Payment_Response resp = client.GetPaymentCodeUrl("1", tradeNo);
+
+            MessageBox.Show(resp.status.ToString());
         }
 
+        /// <summary>
+        /// 商品信息确认按钮，进入支付状态
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void confirmBtn_Click(object sender, EventArgs e)
         {
-            UpdateStateMachine(Stages.OpenDoorToOutward);
+            //UpdateStateMachine(Stages.OpenDoorToOutward);
         }
 
+        /// <summary>
+        /// 取消支付按钮
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void cancelBtn_Click(object sender, EventArgs e)
         {
             speech.Tts2Play(paymentCanceledHintStr);
@@ -1212,8 +1524,83 @@ namespace CashierCapsule
 
             ClearLastScan();
             ClearLastUser();
-            client.CancelPayment(lastTradeNo);
-            lastTradeNo = string.Empty;
+            bool ret = client.CancelPayment(lastUserinfo.id, lastTradeNo);
+            if (ret)
+            {
+                lastTradeNo = string.Empty;
+                logger.Info("Order canceled successful");
+            }
+            else
+            {
+                logger.Error("Order cancel failed");
+            }
+        }
+
+        /// <summary>
+        /// 播放刷脸成功迎宾语
+        /// </summary>
+        /// <param name="welcome"></param>
+        private void PlayWelcomSound(string nickname)
+        {
+            DateTime tmCur = DateTime.Now;
+
+            if (tmCur.Hour < 8 || tmCur.Hour > 18)
+            {
+                speech.Tts2Play("晚上好" + nickname + customerWelcomeHintStr);
+            }
+            else if (tmCur.Hour >= 8 && tmCur.Hour < 12)
+            {
+                speech.Tts2Play("上午好" + nickname + customerWelcomeHintStr);
+            }
+            else
+            {
+                speech.Tts2Play("下午好" + nickname + customerWelcomeHintStr);
+            }
+        }
+
+        /// <summary>
+        /// 播放刷脸错误语音
+        /// </summary>
+        /// <param name="error"></param>
+        private void PlayErrorSound()
+        {
+            speech.Tts2Play(face_identify_error_str);
+        }
+
+        private void TestResetBtn_Click(object sender, EventArgs e)
+        {
+            pcontroller.SendMessage(CommunicationProtocol.CMDTYPE.Reset);
+            UpdateStateMachine(Stages.IDLE);
+        }
+
+        private void TestFaceBtn_Click(object sender, EventArgs e)
+        {
+            UpdateStateMachine(Stages.FaceRecognize);
+        }
+
+        private void TestCloseBtn_Click(object sender, EventArgs e)
+        {
+            UpdateStateMachine(Stages.CloseDoor);
+        }
+
+        private void TestDoCashierBtn_Click(object sender, EventArgs e)
+        {
+            UpdateStateMachine(Stages.DoCashier);
+        }
+
+        private void TestOpenOutBtn_Click(object sender, EventArgs e)
+        {
+            UpdateStateMachine(Stages.OpenDoorToInward);
+        }
+
+        private void TestCloseNobodyBtn_Click(object sender, EventArgs e)
+        {
+            UpdateStateMachine(Stages.CloseDoorWithNobodyInside);
+        }
+
+        private void TestOpenInBtn_Click(object sender, EventArgs e)
+        {
+            UpdateStateMachine(Stages.OpenDoorToInward);
         }
     }
 }

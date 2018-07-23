@@ -18,6 +18,8 @@ namespace DoorTestForm
         /// </summary>
         PlatformController pcontroller;
 
+        PlatformController encoder;
+
         /// <summary>
         /// RichTextBox委托赋值
         /// </summary>
@@ -60,16 +62,31 @@ namespace DoorTestForm
                 comboBox1.SelectedIndex = 0;
             }
 
+            for (int i = 0; i < names.Length; i++)
+            {
+                comboBox2.Items.Add(names[i]);
+            }
+            if (comboBox2.Items.Count > 0)
+            {
+                comboBox2.SelectedIndex = 0;
+            }
+
+            encoder = new PlatformController();
+
             pcontroller = new PlatformController();
 
             openControllerBtn.Enabled = true;
             closeControllerBtn.Enabled = false;
+
+            openEncBtn.Enabled = true;
+            closeEncBtn.Enabled = false;
 
             sendBtn1.Enabled = false;
             sendBtn2.Enabled = false;
             sendBtn3.Enabled = false;
             sendBtn4.Enabled = false;
             sendBtn5.Enabled = false;
+            sendBtn6.Enabled = false;
         }
 
         /// <summary>
@@ -160,6 +177,7 @@ namespace DoorTestForm
         private void closeControllerBtn_Click(object sender, EventArgs e)
         {
             pcontroller.MsgRecieved -= ProcessControllerMessage;
+            pcontroller.PortListener.Dispose();
             pcontroller.Close();
 
             openControllerBtn.Enabled = true;
@@ -205,6 +223,54 @@ namespace DoorTestForm
         private void CleanBtn_Click(object sender, EventArgs e)
         {
             richTextBox1.Clear();
+        }
+
+        private void openEncBtn_Click(object sender, EventArgs e)
+        {
+            string portname = comboBox1.SelectedItem.ToString();
+            encoder.Open(portname, 9600);
+            encoder.MsgRecieved += GetEncoderMessage;
+
+            openEncBtn.Enabled = false;
+            closeEncBtn.Enabled = true;
+
+            sendBtn6.Enabled = true;
+        }
+
+        private void GetEncoderMessage(object sender, PlatformController.MsgEventArgs e)
+        {
+            CommunicationProtocol.CMDTYPE ct = e.msg.cmdType;
+
+            string txt = "Recieved "
+                    + Enum.GetName(typeof(CommunicationProtocol.CMDTYPE), ct)
+                    + " message, payload: ";
+
+            switch (ct)
+            {
+                case CommunicationProtocol.CMDTYPE.EncoderUpdate:
+                    {
+                        int val = BitConverter.ToInt32(e.msg.payload, 0);
+                        SetDataText(richTextBox2, val.ToString());
+                        break;
+                    }
+            }
+        }
+
+        private void closeEncBtn_Click(object sender, EventArgs e)
+        {
+            encoder.MsgRecieved -= GetEncoderMessage;
+            encoder.PortListener.Dispose();
+            encoder.Close();
+
+            openEncBtn.Enabled = true;
+            closeEncBtn.Enabled = false;
+
+            sendBtn6.Enabled = false;
+        }
+
+        private void sendBtn6_Click(object sender, EventArgs e)
+        {
+            encoder.SendMessage(CommunicationProtocol.CMDTYPE.ResetEncoder);
         }
     }
 }

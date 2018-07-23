@@ -31,9 +31,9 @@
             this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
             this.richTextBox1 = new System.Windows.Forms.RichTextBox();
-            this.pictureBox1 = new System.Windows.Forms.PictureBox();
+            this.pictureBoxCenter = new System.Windows.Forms.PictureBox();
             this.timer1 = new System.Windows.Forms.Timer(this.components);
-            this.pictureBox2 = new System.Windows.Forms.PictureBox();
+            this.pictureBoxAlwaysOn = new System.Windows.Forms.PictureBox();
             this.tileBtn = new Bunifu.Framework.UI.BunifuTileButton();
             this.bunifuElipse1 = new Bunifu.Framework.UI.BunifuElipse(this.components);
             this.doubleBitmapControl1 = new BunifuAnimatorNS.DoubleBitmapControl();
@@ -43,8 +43,8 @@
             this.loadBox_small = new System.Windows.Forms.PictureBox();
             this.bunifuCustomLabel1 = new Bunifu.Framework.UI.BunifuCustomLabel();
             this.pictureBox3 = new System.Windows.Forms.PictureBox();
-            ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)(this.pictureBox2)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.pictureBoxCenter)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.pictureBoxAlwaysOn)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox4)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.loadBox_small)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox3)).BeginInit();
@@ -61,29 +61,28 @@
             this.richTextBox1.Text = "";
             this.richTextBox1.Visible = false;
             // 
-            // pictureBox1
+            // pictureBoxCenter
             // 
-            this.pictureBox1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            this.pictureBoxCenter.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.pictureBox1.Location = new System.Drawing.Point(176, 636);
-            this.pictureBox1.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
-            this.pictureBox1.Name = "pictureBox1";
-            this.pictureBox1.Size = new System.Drawing.Size(856, 628);
-            this.pictureBox1.SizeMode = System.Windows.Forms.PictureBoxSizeMode.CenterImage;
-            this.pictureBox1.TabIndex = 4;
-            this.pictureBox1.TabStop = false;
+            this.pictureBoxCenter.Location = new System.Drawing.Point(176, 614);
+            this.pictureBoxCenter.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
+            this.pictureBoxCenter.Name = "pictureBoxCenter";
+            this.pictureBoxCenter.Size = new System.Drawing.Size(856, 809);
+            this.pictureBoxCenter.SizeMode = System.Windows.Forms.PictureBoxSizeMode.CenterImage;
+            this.pictureBoxCenter.TabIndex = 4;
+            this.pictureBoxCenter.TabStop = false;
             // 
-            // pictureBox2
+            // pictureBoxAlwaysOn
             // 
-            this.pictureBox2.Location = new System.Drawing.Point(340, 388);
-            this.pictureBox2.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
-            this.pictureBox2.Name = "pictureBox2";
-            this.pictureBox2.Size = new System.Drawing.Size(213, 225);
-            this.pictureBox2.SizeMode = System.Windows.Forms.PictureBoxSizeMode.StretchImage;
-            this.pictureBox2.TabIndex = 6;
-            this.pictureBox2.TabStop = false;
-            this.pictureBox2.Visible = false;
+            this.pictureBoxAlwaysOn.Location = new System.Drawing.Point(176, 385);
+            this.pictureBoxAlwaysOn.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
+            this.pictureBoxAlwaysOn.Name = "pictureBoxAlwaysOn";
+            this.pictureBoxAlwaysOn.Size = new System.Drawing.Size(309, 225);
+            this.pictureBoxAlwaysOn.SizeMode = System.Windows.Forms.PictureBoxSizeMode.StretchImage;
+            this.pictureBoxAlwaysOn.TabIndex = 6;
+            this.pictureBoxAlwaysOn.TabStop = false;
             // 
             // tileBtn
             // 
@@ -98,7 +97,7 @@
             this.tileBtn.ImageZoom = 50;
             this.tileBtn.LabelPosition = 40;
             this.tileBtn.LabelText = "nickName";
-            this.tileBtn.Location = new System.Drawing.Point(683, 388);
+            this.tileBtn.Location = new System.Drawing.Point(819, 385);
             this.tileBtn.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
             this.tileBtn.Name = "tileBtn";
             this.tileBtn.Size = new System.Drawing.Size(213, 225);
@@ -113,7 +112,7 @@
             // doubleBitmapControl1
             // 
             this.doubleBitmapControl1.Location = new System.Drawing.Point(796, 979);
-            this.doubleBitmapControl1.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.doubleBitmapControl1.Margin = new System.Windows.Forms.Padding(4);
             this.doubleBitmapControl1.Name = "doubleBitmapControl1";
             this.doubleBitmapControl1.Size = new System.Drawing.Size(100, 29);
             this.doubleBitmapControl1.TabIndex = 9;
@@ -125,7 +124,7 @@
             this.panel1.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(134)))), ((int)(((byte)(84)))), ((int)(((byte)(0)))));
             this.panel1.Dock = System.Windows.Forms.DockStyle.Bottom;
             this.panel1.Location = new System.Drawing.Point(0, 1766);
-            this.panel1.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.panel1.Margin = new System.Windows.Forms.Padding(4);
             this.panel1.Name = "panel1";
             this.panel1.Size = new System.Drawing.Size(1200, 34);
             this.panel1.TabIndex = 10;
@@ -134,7 +133,7 @@
             // 
             this.pictureBox4.Image = ((System.Drawing.Image)(resources.GetObject("pictureBox4.Image")));
             this.pictureBox4.Location = new System.Drawing.Point(0, 50);
-            this.pictureBox4.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.pictureBox4.Margin = new System.Windows.Forms.Padding(4);
             this.pictureBox4.Name = "pictureBox4";
             this.pictureBox4.Size = new System.Drawing.Size(1200, 265);
             this.pictureBox4.SizeMode = System.Windows.Forms.PictureBoxSizeMode.CenterImage;
@@ -146,7 +145,7 @@
             this.panel2.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(224)))), ((int)(((byte)(184)))), ((int)(((byte)(73)))));
             this.panel2.Dock = System.Windows.Forms.DockStyle.Top;
             this.panel2.Location = new System.Drawing.Point(0, 0);
-            this.panel2.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.panel2.Margin = new System.Windows.Forms.Padding(4);
             this.panel2.Name = "panel2";
             this.panel2.Size = new System.Drawing.Size(1200, 22);
             this.panel2.TabIndex = 13;
@@ -154,8 +153,8 @@
             // loadBox_small
             // 
             this.loadBox_small.Image = ((System.Drawing.Image)(resources.GetObject("loadBox_small.Image")));
-            this.loadBox_small.Location = new System.Drawing.Point(523, 388);
-            this.loadBox_small.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.loadBox_small.Location = new System.Drawing.Point(527, 385);
+            this.loadBox_small.Margin = new System.Windows.Forms.Padding(4);
             this.loadBox_small.Name = "loadBox_small";
             this.loadBox_small.Size = new System.Drawing.Size(213, 225);
             this.loadBox_small.SizeMode = System.Windows.Forms.PictureBoxSizeMode.CenterImage;
@@ -200,8 +199,8 @@
             this.Controls.Add(this.panel1);
             this.Controls.Add(this.doubleBitmapControl1);
             this.Controls.Add(this.tileBtn);
-            this.Controls.Add(this.pictureBox2);
-            this.Controls.Add(this.pictureBox1);
+            this.Controls.Add(this.pictureBoxAlwaysOn);
+            this.Controls.Add(this.pictureBoxCenter);
             this.Controls.Add(this.richTextBox1);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.None;
             this.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
@@ -211,8 +210,8 @@
             this.WindowState = System.Windows.Forms.FormWindowState.Maximized;
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.Form1_FormClosing);
             this.Load += new System.EventHandler(this.Form1_Load);
-            ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
-            ((System.ComponentModel.ISupportInitialize)(this.pictureBox2)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.pictureBoxCenter)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.pictureBoxAlwaysOn)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox4)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.loadBox_small)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox3)).EndInit();
@@ -223,9 +222,9 @@
 
         #endregion
         private System.Windows.Forms.RichTextBox richTextBox1;
-        private System.Windows.Forms.PictureBox pictureBox1;
+        private System.Windows.Forms.PictureBox pictureBoxCenter;
         private System.Windows.Forms.Timer timer1;
-        private System.Windows.Forms.PictureBox pictureBox2;
+        private System.Windows.Forms.PictureBox pictureBoxAlwaysOn;
         private Bunifu.Framework.UI.BunifuTileButton tileBtn;
         private Bunifu.Framework.UI.BunifuElipse bunifuElipse1;
         private BunifuAnimatorNS.DoubleBitmapControl doubleBitmapControl1;

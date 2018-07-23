@@ -71,22 +71,24 @@ public class CameraCV
 
     /// <summary>
     /// 返回的图片数据和人脸
+    /// 拆分后仅返回人脸20180721
     /// </summary>
     public class CameraFaceEventArgs : EventArgs
     {
-        Bitmap fullimage;
+        //Bitmap fullimage;
         Bitmap faceimage;
 
-        public CameraFaceEventArgs(Bitmap full, Bitmap face)
+        //public CameraFaceEventArgs(Bitmap full, Bitmap face)
+        public CameraFaceEventArgs(Bitmap face)
         {
-            this.fullimage = full;
+            //this.fullimage = full;
             this.faceimage = face;
         }
 
-        public Bitmap FullImage
-        {
-            get { return fullimage; }
-        }
+        //public Bitmap FullImage
+        //{
+        //    get { return fullimage; }
+        //}
 
         public Bitmap FaceImage
         {
@@ -215,18 +217,23 @@ public class CameraCV
     /// <param name="eventArgs"></param>
     void CaptureNewFrame(Object sender, NewFrameEventArgs eventArgs)
     {
+        // Wroking on switch turn on, only process once when enabled by timer outside
         if (processOnNewFrame)
         {
             //refresh captured image
             captureImage = (Bitmap)eventArgs.Frame.Clone();
-            //start once and capture only one image            
+            //start once and capture only one image     
+            // Always On process, send captured image to event
+            OnImageCaptured(new CameraEventArgs(captureImage));
 
             //call the local face detect method
             if (localFaceDetect)
             {
+                Bitmap detectImage = (Bitmap)eventArgs.Frame.Clone();
+
                 long detectionTime;
                 List<Rectangle> faces = new List<Rectangle>();
-                DetectFace.Detect(captureImage, "haarcascade_frontalface_default.xml", faces, out detectionTime);
+                DetectFace.Detect(detectImage, "haarcascade_frontalface_default.xml", faces, out detectionTime);
                 if (faces.Count <= 0)
                 {
                     //no face in the image
@@ -246,25 +253,23 @@ public class CameraCV
                     }
                     if (faces.Count > 0)
                     {
-                        captureImage = DetectFace.Show(captureImage, faces);
+                        //captureImage = DetectFace.Show(captureImage, faces);
 
                         //var face = DetectFace.SeprateFace(captureImage, faces);
-                        var face = DetectFace.PickOneBigFace(captureImage, faces);
+                        var face = DetectFace.PickOneBigFace(detectImage, faces);
 
                         //only raise event when there is close enough face
                         //OnImageCaptured(new CameraEventArgs(captureImage));
-                        OnFaceCaptured(new CameraFaceEventArgs(captureImage, face));
+                        OnFaceCaptured(new CameraFaceEventArgs(face));
                     }
                 }
             }
             else
             {
-                OnImageCaptured(new CameraEventArgs(captureImage));
+                OnFaceCaptured(new CameraFaceEventArgs(captureImage));
             }
 
-            //raise the event
-            //OnImageCaptured(new CameraEventArgs(captureImage));
-
+            //auto turn off the process to reduce processing time cost
             processOnNewFrame = false;
         }
     }

@@ -17,6 +17,7 @@ namespace EntranceGate
 {
     public partial class Form1 : Form
     {
+        #region 设备实例和全局变量
         /// <summary>
         /// 微光互联扫码器
         /// </summary>
@@ -57,9 +58,29 @@ namespace EntranceGate
         /// </summary>
         int faceError = 0;
 
+        /// <summary>
+        /// 固定店铺ID
+        /// </summary>
         static string shopid = "1";
 
-        #region delegate methods
+        /// <summary>
+        /// 定时刷新picturebox
+        /// </summary>
+        System.Timers.Timer pictureboxRefreshTimer;
+
+        /// <summary>
+        /// 定时刷新faceError
+        /// </summary>
+        System.Timers.Timer faceErrorResetTimer;
+
+        /// <summary>
+        /// 随机生成文件名，防止冲突
+        /// </summary>
+        System.Random rand_filename = new Random();
+
+        #endregion 设备实例和全局变量
+
+        #region Delegate methods
         /// <summary>
         /// RichTextBox委托赋值
         /// </summary>
@@ -219,16 +240,17 @@ namespace EntranceGate
 
         #endregion delegate methods
 
-        /// <summary>
-        /// 定时刷新picturebox
-        /// </summary>
-        System.Timers.Timer pictureboxRefreshTimer;
+        #region 屏幕显示和语音提示字符串
+        private string welcome_str = "欢迎光临物掌柜";
+        private string code_identify_success_str = "欢迎扫码进店购物";
+        private string face_identify_success_str = "欢迎扫脸进店购物";
+        private string face_identify_error_str = "请尝试使用小程序扫码进店";
+        private string identify_hint_str = "欢迎体验扫码或刷脸进店";
+        #endregion 屏幕显示和语音提示字符串
 
         /// <summary>
-        /// 定时刷新faceError
+        /// Main
         /// </summary>
-        System.Timers.Timer faceErrorResetTimer;
-
         public Form1()
         {
             InitializeComponent();
@@ -263,18 +285,13 @@ namespace EntranceGate
             faceErrorResetTimer.Elapsed += new System.Timers.ElapsedEventHandler(faceErrorReset);
             faceErrorResetTimer.AutoReset = true;
             faceErrorResetTimer.Interval = 10000;
+            faceErrorResetTimer.Start();
+
+            //open pictualbox always on
+            SetPictureBoxVisibility(pictureBoxAlwaysOn, true);
         }
 
-        /// <summary>
-        /// 刷新faceError,超时清零
-        /// </summary>
-        private void faceErrorReset(object sender, EventArgs e)
-        {
-            faceError = 0;
-            faceErrorResetTimer.Close();
-
-        }
-
+        #region Scanner
         /// <summary>
         /// 打开互联微光扫码器
         /// </summary>
@@ -332,9 +349,9 @@ namespace EntranceGate
             {
                 SetTileButton(tileBtn, userinfo);
                 SetTileButtonVisable(tileBtn, true);
-                SetPictureBox(pictureBox1, new Bitmap("success.gif"));
+                SetPictureBox(pictureBoxCenter, new Bitmap("success.gif"));
                 SetPictureBoxVisibility(loadBox_small, false);
-                SetMessageLabel(bunifuCustomLabel1, " ");
+                SetMessageLabel(bunifuCustomLabel1, code_identify_success_str);
 
                 OpenGate();
 
@@ -343,7 +360,7 @@ namespace EntranceGate
                 APIClient.Log log = new APIClient.Log()
                 {
                     who = userinfo.id,
-                    where = "1"
+                    where = shopid
                 };
 
                 client.VistLogToSystem(log);
@@ -359,6 +376,11 @@ namespace EntranceGate
             }
         }
 
+        /// <summary>
+        /// 扫码器成功后锁定3s，timer调用解锁函数
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void UnlockScanner(object sender, System.Timers.ElapsedEventArgs e)
         {
             scanner.Unlock();
@@ -373,7 +395,9 @@ namespace EntranceGate
             scanner.Close();
             logger.Info("Close QR Code Scanner.");
         }
+        #endregion Scanner
 
+        #region Camera
         /// <summary>
         /// 摄像头初始化
         /// </summary>
@@ -388,8 +412,18 @@ namespace EntranceGate
             }
             else
             {
+                MessageBox.Show("摄像头初始化失败，请检查相机后重启");
                 logger.Error("Open Camera fail, please check the USB cable.");
             }
+        }
+
+        /// <summary>
+        /// 刷新faceError,超时清零
+        /// </summary>
+        private void faceErrorReset(object sender, EventArgs e)
+        {
+            faceError = 0;
+            faceErrorResetTimer.Close();
         }
 
         /// <summary>
@@ -398,9 +432,10 @@ namespace EntranceGate
         private void OpenCamera()
         {
             //call back function register
-            //camera.ImageCaptured += ShowFaceInPictureBox;
+            camera.ImageCaptured += ShowImageInPictureBox;
             camera.FaceCaptured += ShowFaceInPictureBox;
-            //camera.FaceCaptured += ShowFaceInPictureBox;
+
+            //Open local pre-process
             camera.localFaceDetect = true;
             camera.localFaceDistanceFilter = true;
             //设置人脸过滤的大小阈值, 100*100pixel的最小过滤框
@@ -409,17 +444,19 @@ namespace EntranceGate
             camera.Open();
             CameraCV.StartProcessOnFrame();
         }
-#if false
-        private void ShowFaceInPictureBox(object sender, Camera.CameraEventArgs e)
+
+        /// <summary>
+        /// 实时在picturebox中显示摄像头捕获图像
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void ShowImageInPictureBox(object sender, CameraCV.CameraEventArgs e)
         {
             if(e.Image != null)
             {
-                SetPictureBox(pictureBox1, e.Image);
-                Bitmap bitmap = (Bitmap)e.Image.Clone();
-                faceIdentify(bitmap);
+                SetPictureBox(pictureBoxAlwaysOn, e.Image);
             }
         }
-#endif
 
         /// <summary>
         /// 收到摄像头event事件调用函数
@@ -428,24 +465,24 @@ namespace EntranceGate
         /// <param name="e"></param>
         private void ShowFaceInPictureBox(object sender, CameraCV.CameraFaceEventArgs e)
         {
-            if (e.FullImage != null)
+            if (e.FaceImage != null)
             {
-                //SetPictureBox(pictureBox1, e.FullImage);
-                //SetPictureBox(pictureBox2, e.FaceImage);
-
                 Bitmap bitmap = (Bitmap)e.FaceImage.Clone();
+
                 //change face search from server
                 //if (faceIdentify(bitmap))
                 if(faceIdentify_usingAIP(bitmap))
                 {
-                    //SetPictureBox(pictureBox2, e.FaceImage);
-                    //PlayWelcomSound(tileBtn.LabelText);
-                    SetPictureBox(pictureBox1, new Bitmap("success.gif"));
-                    SetPictureBox(pictureBox2, e.FaceImage);
-                    SetPictureBoxVisibility(pictureBox2, true);
+                    SetPictureBox(pictureBoxCenter, new Bitmap("success.gif"));
+
+                    //hide load box
                     SetPictureBoxVisibility(loadBox_small, false);
+
+                    //play welcome tts with name on the tilebutton
                     PlayWelcomSound(tileBtn.LabelText);
-                    SetMessageLabel(bunifuCustomLabel1, " ");
+
+                    SetMessageLabel(bunifuCustomLabel1, face_identify_success_str);
+
                     faceError = 0;
                 }
                 else
@@ -453,8 +490,12 @@ namespace EntranceGate
                     faceError++;
                     if(faceError > 3)
                     {
-                        SetMessageLabel(bunifuCustomLabel1, "请尝试使用小程序扫码进店");
+                        //show error text on the screen
+                        SetMessageLabel(bunifuCustomLabel1, face_identify_error_str);
+
+                        //play error hint
                         PlayErrorSound();
+
                         faceError = 0;
                     }
                 }
@@ -475,12 +516,17 @@ namespace EntranceGate
 
             if(camera.isProcessing == false)
             {
-                SetPictureBox(pictureBox1, new Bitmap("face.gif"));
-                SetPictureBoxVisibility(pictureBox2, false);
+                SetPictureBox(pictureBoxCenter, new Bitmap("face.gif"));
+
+                //SetPictureBoxVisibility(pictureBox2, false);
+
                 SetTileButtonVisable(tileBtn, false);
+
                 SetPictureBoxVisibility(loadBox_small, true);
+
                 CameraCV.StartProcessOnFrame();
-                SetMessageLabel(bunifuCustomLabel1, "欢迎扫脸进店购物");
+
+                SetMessageLabel(bunifuCustomLabel1, identify_hint_str);
             }
         }
 
@@ -492,73 +538,14 @@ namespace EntranceGate
             if(camera.isOpen)
             {
                 CameraCV.SkipProcessOnFrame();
-                //camera.ImageCaptured -= ShowFaceInPictureBox;
+                camera.ImageCaptured -= ShowImageInPictureBox;
                 camera.FaceCaptured -= ShowFaceInPictureBox;
                 camera.Close();
             }
         }
 
         /// <summary>
-        /// 打开arduino控制器串口，并设置监听
-        /// </summary>
-        private void OpenController()
-        {
-            string portname = "COM3";
-            pcontroller.Open(portname, 9600);
-            logger.Info("Open controller using " + portname + "@9600");
-        }
-
-        /// <summary>
-        /// 关闭arduino控制器串口
-        /// </summary>
-        private void CloseController()
-        {
-            pcontroller.Close();
-            logger.Info("Close controller serialport success");
-        }
-
-        /// <summary>
-        /// 发送闸机开门消息到arduino
-        /// </summary>
-        private void OpenGate()
-        {
-            pcontroller.SendGateOpenMessage();
-            logger.Info("Send open gate command to controller success");
-        }
-
-        /// <summary>
-        /// 播放迎宾语
-        /// </summary>
-        /// <param name="welcome"></param>
-        private void PlayWelcomSound(string nickname)
-        {
-            DateTime tmCur = DateTime.Now;
-
-            if (tmCur.Hour < 8 || tmCur.Hour > 18)
-            {
-                speech.Tts2Play("晚上好" + nickname + "欢迎光临物掌柜。");
-            }
-            else if (tmCur.Hour >= 8 && tmCur.Hour < 12)
-            {
-                speech.Tts2Play("上午好" + nickname + "欢迎光临物掌柜。");
-            }
-            else
-            {
-                speech.Tts2Play("下午好" + nickname + "欢迎光临物掌柜。");
-            }
-        }
-
-        /// <summary>
-        /// 播放错误语音
-        /// </summary>
-        /// <param name="error"></param>
-        private void PlayErrorSound()
-        {
-            speech.Tts2Play("请尝试使用小程序扫码进店。");
-        }
-
-        /// <summary>
-        /// 刷脸进门流程处理
+        /// 刷脸进门流程处理, Not Used
         /// </summary>
         /// <param name="bmap"></param>
         private bool faceIdentify(Bitmap bmap)
@@ -566,9 +553,10 @@ namespace EntranceGate
             bool ret = false;
             try
             {
-                string filepath = "temp.jpg";
+                //random file name, solving conflict problem
+                string filepath = rand_filename.Next().ToString() + ".jpg";
 
-                if(File.Exists(filepath))
+                if (File.Exists(filepath))
                 {
                     File.Delete(filepath);
                 }
@@ -597,20 +585,25 @@ namespace EntranceGate
                 }
                 File.Delete(filepath);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 logger.Error("Camera Event search faces failed, exception: " + ex.ToString());
             }
             return ret;
         }
 
+        /// <summary>
+        /// 刷脸进门流程处理，直接调用aip节省阿里云流量费用
+        /// </summary>
+        /// <param name="bmap"></param>
+        /// <returns></returns>
         private bool faceIdentify_usingAIP(Bitmap bmap)
         {
             bool ret = false;
 
             var result = CVclient.face_search_using_aip(bmap);
             logger.Info("Get Face search return message : " + result.ToString());
-            if(result.GetValue("error_code").ToString() != "0")
+            if (result.GetValue("error_code").ToString() != "0")
             {
                 ret = false;
             }
@@ -647,6 +640,70 @@ namespace EntranceGate
             }
             return ret;
         }
+        #endregion Camera
+
+        #region Arduino
+        /// <summary>
+        /// 打开arduino控制器串口
+        /// </summary>
+        private void OpenController()
+        {
+            string portname = "COM3";
+            pcontroller.Open(portname, 9600);
+            logger.Info("Open controller using " + portname + "@9600");
+        }
+
+        /// <summary>
+        /// 关闭arduino控制器串口
+        /// </summary>
+        private void CloseController()
+        {
+            pcontroller.Close();
+            logger.Info("Close controller serialport success");
+        }
+
+        /// <summary>
+        /// 发送闸机开门消息到arduino
+        /// </summary>
+        private void OpenGate()
+        {
+            pcontroller.SendGateOpenMessage();
+            logger.Info("Send open gate command to controller success");
+        }
+        #endregion Arduino
+
+        #region Sound
+        /// <summary>
+        /// 播放迎宾语
+        /// </summary>
+        /// <param name="welcome"></param>
+        private void PlayWelcomSound(string nickname)
+        {
+            DateTime tmCur = DateTime.Now;
+
+            if (tmCur.Hour < 8 || tmCur.Hour > 18)
+            {
+                speech.Tts2Play("晚上好" + nickname + welcome_str);
+            }
+            else if (tmCur.Hour >= 8 && tmCur.Hour < 12)
+            {
+                speech.Tts2Play("上午好" + nickname + welcome_str);
+            }
+            else
+            {
+                speech.Tts2Play("下午好" + nickname + welcome_str);
+            }
+        }
+
+        /// <summary>
+        /// 播放错误语音
+        /// </summary>
+        /// <param name="error"></param>
+        private void PlayErrorSound()
+        {
+            speech.Tts2Play(face_identify_error_str);
+        }
+        #endregion Sound
 
         /// <summary>
         /// 关闭所有已打开资源
@@ -655,9 +712,12 @@ namespace EntranceGate
         /// <param name="e"></param>
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
+            pictureboxRefreshTimer.Stop();
+            faceErrorResetTimer.Stop();
             CloseScanner();
             CloseCamera();
             CloseController();
+            this.Dispose();
         }
     }
 }

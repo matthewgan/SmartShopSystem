@@ -790,14 +790,85 @@ public class APIClient
         return new Payment_Response() { status = "1" };
     }
 
-    public bool CancelPayment(string trade_no)
+    public bool CancelPayment(string uid, string trade_no)
     {
-        return true;
+        string responseMessage = string.Empty;
+
+        var request = (HttpWebRequest)WebRequest.Create(baseAddress + cancelPayment);
+
+        request.Method = "POST";
+        request.ContentType = "application/json";
+        request.Headers["Authorization"] = "Token " + token;
+
+        Payment_Query_Request req = new Payment_Query_Request() { user_id = uid, trade_no = trade_no };
+
+        string jsonstring = JsonConvert.SerializeObject(req);
+        var data = Encoding.UTF8.GetBytes(jsonstring);
+        request.ContentLength = data.Length;
+        try
+        {
+            //post data
+            using (var stream = request.GetRequestStream())
+            {
+                stream.Write(data, 0, data.Length);
+            }
+
+
+            WebResponse response = request.GetResponse();
+
+            if (((HttpWebResponse)response).StatusCode == HttpStatusCode.OK)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+        catch (Exception ex)
+        {
+            return false;
+        }
     }
 
     public bool CheckPaymentResult(string userid, string trade_no)
     {
-        return false;
+        string responseMessage = string.Empty;
+
+        var request = (HttpWebRequest)WebRequest.Create(baseAddress + checkPaymentResult);
+
+        request.Method = "POST";
+        request.ContentType = "application/json";
+        request.Headers["Authorization"] = "Token " + token;
+
+        Payment_Query_Request req = new Payment_Query_Request() { user_id = userid, trade_no = trade_no };
+
+        string jsonstring = JsonConvert.SerializeObject(req);
+        var data = Encoding.UTF8.GetBytes(jsonstring);
+        request.ContentLength = data.Length;
+        try
+        {
+            //post data
+            using (var stream = request.GetRequestStream())
+            {
+                stream.Write(data, 0, data.Length);
+            }
+
+            WebResponse response = request.GetResponse();
+
+            if (((HttpWebResponse)response).StatusCode == HttpStatusCode.OK)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+        catch (Exception ex)
+        {
+            return false;
+        }
     }
 
     public static void HttpUploadFile(string url, string file, string paramName, string contentType, System.Collections.Specialized.NameValueCollection nvc)
@@ -861,5 +932,11 @@ public class APIClient
             wr = null;
         }
     }
+
+    //public WebResponse HttpRequestFunction(string func_url, Object RequestObj)
+    //{
+
+    //}
+
 }
 

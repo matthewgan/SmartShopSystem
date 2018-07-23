@@ -24,6 +24,8 @@ enum CMDTYPE
 	OpenGate = 0x41,
 	HeartBeatMsg,
 
+
+
 	DebugMessage = 0xFF,
 };
 

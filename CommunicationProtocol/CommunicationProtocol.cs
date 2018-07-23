@@ -33,6 +33,11 @@ public class CommunicationProtocol
         OpenGate = 0x41,
         HeartBeatMsg,
 
+        ReadEncoderRequest = 0x81,
+        ReadEncoderResponse,
+        ResetEncoder,
+        EncoderUpdate,
+
         DebugMessage = 0xFF,
     }
 

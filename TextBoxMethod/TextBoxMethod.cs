@@ -188,6 +188,5 @@ public static class TextBoxMethod
 
         return strResult;
     }
-
 }
 

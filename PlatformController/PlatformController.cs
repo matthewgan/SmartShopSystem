@@ -26,7 +26,7 @@ public class PlatformController
     /// <summary>
     /// 串口声明
     /// </summary>
-    static private SerialPort controlPort;
+    private SerialPort controlPort;
 
     /// <summary>
     /// Event类定义
@@ -176,7 +176,7 @@ public class PlatformController
     /// <param name="dataStream"></param>
     /// <param name="state"></param>
     /// <param name="packet"></param>
-    static public void ProcessData(ref Queue<byte> dataStream, ref DecodeState state, ref CommunicationProtocol.DataPacket packet)
+    public void ProcessData(ref Queue<byte> dataStream, ref DecodeState state, ref CommunicationProtocol.DataPacket packet)
     {
         //Todo Process fifo data stream from headtracking port
         bool stopSerching = false;
