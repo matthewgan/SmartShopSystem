@@ -13,6 +13,7 @@ void Door::init(Stream& port)
 	pinMode(PosSensorOutletOpen, INPUT_PULLUP);
 	pinMode(PosSensorClosed, INPUT_PULLUP);
 	pinMode(WeightSensor, INPUT);
+	pinMode(PIRSensor, INPUT);		
 }
 
 void Door::SetMotorPower(Direction dir, int spd, int AccTime) //Acceleration Time is in ms
@@ -72,13 +73,23 @@ void Door::MotorDriveLadder()
 	{
 		byte motorPower = currentPower_CMD;
 		MotorPort->write(motorPower);
+		powerDiff = currentPower_CMD - motorStopCMD;
+		startPower = currentPower_CMD;
 	}
 	//deacc step
 	else if (timeNow - startTime < accTime * 3)
 	{
 		float powerRatio = (timeNow - startTime - 2 * accTime) / (float)accTime;
-		currentPower_CMD = (byte)(currentPower_CMD + (-powerDiff * powerRatio));
-		currentPower_CMD = constrain(currentPower_CMD, 0, 255);
+		currentPower_CMD = (byte)(startPower + (-powerDiff * powerRatio));
+
+		if (currentDir == forward)
+		{
+			currentPower_CMD = constrain(currentPower_CMD, 127, 255);
+		}
+		else
+		{
+			currentPower_CMD = constrain(currentPower_CMD, 0, 127);
+		}
 		byte motorPower = currentPower_CMD;
 		MotorPort->write(motorPower);
 	}
@@ -113,7 +124,7 @@ bool Door::EmgTriggered()
 bool Door::OpenLetIn()
 {
 	bool successed = false;
-	SetMotorPower(backwards, motorFixSpd, 1000);
+	SetMotorPower(backwards, motorFastSpd, 1500);
 	currentDoorState = RotatingInwards;
 	unsigned long timer = millis();
 	//SendDebugMsg("opening door to let customer in \n");
@@ -123,10 +134,12 @@ bool Door::OpenLetIn()
 		//&& (millis() - timer <= doorRotatingTimeout)
 		)
 	{
-		MotorDrive();
+		//MotorDrive();
+		MotorDriveLadder();
 	}
 	if (digitalRead(PosSensorInletOpen) == ActiveLowTriggered)
-	{//check if exit correctly
+	{
+		//check if exit correctly
 		successed = true;
 		currentDoorState = OpenInwards;
 		motorStop();
@@ -140,7 +153,7 @@ bool Door::OpenLetIn()
 bool Door::OpenLetOut()
 {
 	bool successed = false;
-	SetMotorPower(forward, motorFixSpd, 1000);
+	SetMotorPower(forward, motorFastSpd, 1500);
 	currentDoorState = RotatingOutwards;
 	unsigned long timer = millis();
 	//SendDebugMsg("opening door to let customer out \n");
@@ -149,7 +162,8 @@ bool Door::OpenLetOut()
 		//&& EmgTriggered() == false
 		)
 	{
-		MotorDrive();
+		//MotorDrive();
+		MotorDriveLadder();
 	}
 	if (digitalRead(PosSensorOutletOpen) == ActiveLowTriggered)
 	{
@@ -168,7 +182,7 @@ bool Door::Close()
 	{
 		//SendDebugMsg("Door Closing outwards \n");
 		currentDoorState = RotatingOutwards;
-		SetMotorPower(forward, motorFixSpd, 1000);
+		SetMotorPower(forward, motorFastSpd, 1500);
 		unsigned long timer = millis();
 		while ((CheckCustomerOnPlatform() == true)
 			&& (digitalRead(PosSensorClosed) != ActiveLowTriggered)
@@ -176,7 +190,8 @@ bool Door::Close()
 			&& (millis() - timer <= doorRotatingTimeout)
 			)
 		{
-			MotorDrive();
+			//MotorDrive();
+			MotorDriveLadder();
 		}
 		if (digitalRead(PosSensorClosed) == ActiveLowTriggered)
 		{
@@ -190,7 +205,7 @@ bool Door::Close()
 	{
 		//SendDebugMsg("Door Closing inwards \n");
 		currentDoorState = RotatingInwards;
-		SetMotorPower(backwards, motorFixSpd, 1000);
+		SetMotorPower(backwards, motorFastSpd, 1500);
 		unsigned long timer = millis();
 		while (
 			//(CheckCustomerOnPlatform() == false)
@@ -200,7 +215,8 @@ bool Door::Close()
 			//&& (millis() - timer <= doorRotatingTimeout)
 			)
 		{
-			MotorDrive();
+			//MotorDrive();
+			MotorDriveLadder();
 		}
 		if (digitalRead(PosSensorClosed) == ActiveLowTriggered)
 		{
@@ -218,13 +234,14 @@ void Door::ReleaseInwards()
 	//SendDebugMsg("door Releasing inwards. \n");
 	DoorState previousState = currentDoorState;
 	currentDoorState = RotatingInwards;
-	SetMotorPower(backwards, motorFixSpd, 1000);
+	SetMotorPower(backwards, motorSlowSpd, 1000);
 	unsigned long timer = millis();
 	while (digitalRead(PosSensorInletOpen) != ActiveLowTriggered 
 		//&& EmgTriggered() == false 
 		&& (millis() - timer <= doorRotatingTimeout))
 	{
-		MotorDrive();
+		//MotorDrive();
+		MotorDriveLadder();
 	}
 	motorStop();
 	currentDoorState = OpenInwards;
@@ -235,13 +252,14 @@ void Door::ReleaseOutwards()
 	//SendDebugMsg("door Releasing outwards. \n");
 	DoorState previousState = currentDoorState;
 	currentDoorState = RotatingOutwards;
-	SetMotorPower(forward, motorFixSpd, 1000);
+	SetMotorPower(forward, motorSlowSpd, 1000);
 	unsigned long timer = millis();
 	while (digitalRead(PosSensorOutletOpen) != ActiveLowTriggered 
 		//&& EmgTriggered() == false 
 		&& (millis() - timer <= doorRotatingTimeout))
 	{
-		MotorDrive();
+		//MotorDrive();
+		MotorDriveLadder();
 	}
 	motorStop();
 	currentDoorState = OpenOutwards;

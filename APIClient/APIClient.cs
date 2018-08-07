@@ -438,14 +438,16 @@ public class APIClient
         var data = Encoding.UTF8.GetBytes(jsonstring);
         request.ContentLength = data.Length;
 
-        //post data
-        using (var stream = request.GetRequestStream())
-        {
-            stream.Write(data, 0, data.Length);
-        }
-
         try
         {
+
+            //post data
+            using (var stream = request.GetRequestStream())
+            {
+                stream.Write(data, 0, data.Length);
+            }
+
+        
             //get response
             WebResponse response = request.GetResponse();
 

@@ -32,8 +32,8 @@ public:
 	bool CheckCustomerOnPlatform();
 
 private:
-	byte motorFixSpd = 25;
-	byte motorMaxSpd = 50;
+	byte motorSlowSpd = 20;
+	byte motorFastSpd = 50;
 	byte motorStopCMD = 127;
 	float  currentPower_CMD = 0;
 	float startPower = 0;

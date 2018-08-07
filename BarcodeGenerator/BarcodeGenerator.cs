@@ -10,14 +10,12 @@ public class BarcodeGenerator
 {
     public static Random rand = new Random();
 
-    public static Bitmap GenerateQRCode(string data, string label)
+    public static Bitmap GenerateQRCode(string data)
     {
         string filename = rand.Next().ToString() + ".png";
         BarcodeSettings settings = new BarcodeSettings();
         settings.Type = BarCodeType.QRCode;
         settings.Data = data;
-        settings.Data2D = label;
-        settings.QRCodeDataMode = QRCodeDataMode.AlphaNumber;
         settings.X = 1.0f;
         settings.QRCodeECL = QRCodeECL.H;
 

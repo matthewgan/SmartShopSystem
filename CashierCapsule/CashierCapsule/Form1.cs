@@ -41,7 +41,7 @@ namespace CashierCapsule
         /// <summary>
         /// Encoder controller Arduino UNO
         /// </summary>
-        PlatformController encoder;
+        EncoderController encoder;
 
         /// <summary>
         /// 摄像头处理模块
@@ -96,14 +96,19 @@ namespace CashierCapsule
         private int faceError = 0;
 
         /// <summary>
-        /// 定时刷新picturebox
+        /// 定时刷新picturebox的timer
         /// </summary>
         System.Timers.Timer pictureboxRefreshTimer;
 
         /// <summary>
-        /// 定时刷新faceError
+        /// 定时刷新faceError的timer
         /// </summary>
         System.Timers.Timer faceErrorResetTimer;
+
+        /// <summary>
+        /// 支付倒计时timer
+        /// </summary>
+        System.Timers.Timer CountdownTimer;
 
         /// <summary>
         /// 固定店铺ID
@@ -221,8 +226,8 @@ namespace CashierCapsule
             }
             else
             {
-                //txt.Text = content;
-                txt.AppendText(content + Environment.NewLine);
+                txt.Text = content;
+                //txt.AppendText(content + Environment.NewLine);
             }
         }
 
@@ -302,20 +307,46 @@ namespace CashierCapsule
             else
             {
                 view.ColumnCount = 3;
-                view.Columns[0].Name = "ID";
-                view.Columns[1].Name = "名称";
+                view.Columns[0].Name = "名称";
+                view.Columns[1].Name = "规格";
                 view.Columns[2].Name = "单价";
 
                 foreach (APIClient.MerchandiseInfoCashier info in infos)
                 {
                     string[] row = new string[]
                     {
-                        info.id,
                         info.name,
+                        info.scale,
                         info.originPrice,
                     };
                     view.Rows.Add(row);
                 }
+            }
+        }
+
+        /// <summary>
+        /// panel委托赋值
+        /// </summary>
+        /// <param name="panel"></param>
+        /// <param name="bool"></param>
+        delegate void setPanelVisiable(Panel panel, bool isVisiable);
+
+        /// <summary>
+        /// DataGridView委托赋值函数
+        /// </summary>
+        /// <param name="panel"></param>
+        /// <param name="bool"></param>
+        private void SetPanelVisiable(Panel panel, bool isVisiable)
+        {
+            if (panel.InvokeRequired)
+            {
+                setPanelVisiable setThis = new setPanelVisiable(SetPanelVisiable);
+
+                panel.Invoke(setThis, panel, isVisiable);
+            }
+            else
+            {
+                panel.Visible = isVisiable;
             }
         }
 
@@ -397,6 +428,32 @@ namespace CashierCapsule
             }
         }
 
+        /// <summary>
+        /// DataGridViewVisible委托赋值
+        /// </summary>
+        /// <param name="view"></param>
+        /// <param name="isVisiable"></param>
+        delegate void setDataGridViewVisibility(Bunifu.Framework.UI.BunifuCustomDataGrid view, bool isVisiable);
+
+        /// <summary>
+        /// DataGridViewVisible委托赋值函数
+        /// </summary>
+        /// <param name="view"></param>
+        /// <param name="isVisiable"></param>
+        private void SetDataGridViewVisibility(Bunifu.Framework.UI.BunifuCustomDataGrid view, bool isVisiable)
+        {
+            if (view.InvokeRequired)
+            {
+                setDataGridViewVisibility setThis = new setDataGridViewVisibility(SetDataGridViewVisibility);
+
+                view.Invoke(setThis, view, isVisiable);
+            }
+            else
+            {
+                view.Visible = isVisiable;
+            }
+        }
+
         #endregion Delegate Methods
 
         /// <summary>
@@ -419,16 +476,13 @@ namespace CashierCapsule
             OpenController("COM3");
 
             //addtional encoder controller
-            encoder = new PlatformController();
+            encoder = new EncoderController();
             OpenEncoderController("COM5");
 
             //3.open the UHF reader 
             reader = new ReaderMethod();
             //comment when dont have reader connected
             OpenUHFReader("COM4");
-            //read antenna power
-
-
 
             //4.request token from server
             //comment when the internet is off
@@ -461,7 +515,7 @@ namespace CashierCapsule
 
             //pictureBoxWelcome is for show image when no one in the cashier
             //set to false when debugging
-            pictureBoxWelcome.Visible = false;
+            pictureBoxWelcome.Visible = true;
 
             //setup a timer to reduce time cost on face identify
             pictureboxRefreshTimer = new System.Timers.Timer();
@@ -475,6 +529,11 @@ namespace CashierCapsule
             faceErrorResetTimer.AutoReset = true;
             faceErrorResetTimer.Interval = 10000;
             faceErrorResetTimer.Start();
+
+            CountdownTimer = new System.Timers.Timer();
+            CountdownTimer.Elapsed += new System.Timers.ElapsedEventHandler(CountdownTimer_Tick);
+            CountdownTimer.Interval = 1000;
+            CountdownTimer.AutoReset = true;
         }
 
         #region Camera
@@ -534,35 +593,6 @@ namespace CashierCapsule
         /// <param name="e"></param>
         private void ShowFaceInPictureBox(object sender, CameraCV.CameraFaceEventArgs e)
         {
-#if false
-            if (e.FullImage != null)
-            {
-                SetPictureBox(pictureBox1, e.FullImage);
-                SetPictureBox(pictureBox2, e.FaceImage);
-                Bitmap bitmap = (Bitmap)e.FaceImage.Clone();
-
-                try
-                {
-                    //save the face for API client
-                    bitmap.Save("./face.jpg", System.Drawing.Imaging.ImageFormat.Jpeg);
-
-                    APIClient.UserInfo userinfo = client.EntryByFace("face.jpg");
-                    if (userinfo.nickName != string.Empty)
-                    {
-                        SetTileButton(bunifuTileButtonFace, userinfo);
-                        //if user face is found, skip process
-                        CameraCV.SkipProcessOnFrame();
-                        //save this user to global variable
-                        lastUserinfo = userinfo;
-                    }
-                    System.IO.File.Delete("./face.jpg");
-                }
-                catch(Exception ex)
-                {
-                    logger.Error("Camera Event search faces failed, exception: " + ex.ToString());
-                }
-            }
-#else
             if (e.FaceImage != null)
             {
                 Bitmap bitmap = (Bitmap)e.FaceImage.Clone();
@@ -573,8 +603,8 @@ namespace CashierCapsule
                     //play welcome sound with nickname
                     //PlayWelcomSound(bunifuTileButtonFace.LabelText);
 
-                    SetPictureBox(pictureBoxFace, e.FaceImage);
-                    SetPictureBoxVisibility(pictureBoxFace, true);
+                    //SetPictureBox(pictureBoxFace, e.FaceImage);
+                    //SetPictureBoxVisibility(pictureBoxFace, true);
 
                     faceError = 0;
 
@@ -586,7 +616,7 @@ namespace CashierCapsule
                 }
                 else
                 {
-                    SetPictureBoxVisibility(pictureBoxFace, false);
+                    //SetPictureBoxVisibility(pictureBoxFace, false);
                     faceError++;
                     if (faceError > 3)
                     {
@@ -595,7 +625,6 @@ namespace CashierCapsule
                     }
                 }
             }
-#endif
         }
 
         /// <summary>
@@ -628,6 +657,8 @@ namespace CashierCapsule
                     {
                         SetTileButton(bunifuTileButtonFace, userinfo);
                         SetTileButtonVisable(bunifuTileButtonFace, true);
+                        SetPictureBoxVisibility(loadBox, false);
+                        SetPictureBoxVisibility(pictureBoxAlwaysOn, false);
 
                         PlayWelcomSound(userinfo.nickName);
 
@@ -639,6 +670,7 @@ namespace CashierCapsule
 
                         client.VistLogToSystem(log);
                         ret = true;
+                        lastUserinfo = userinfo;
                     }
                 }
             }
@@ -704,7 +736,6 @@ namespace CashierCapsule
                 logger.Error("Set UHF reader working atennas failed");
             }
 
-            byte pow = 29;
             if (SetOutputPower(output_power)!=true)
             {
                 logger.Error("Set UHF reader output power failed!");
@@ -723,6 +754,7 @@ namespace CashierCapsule
             {
                 val = 0x21;
             }
+            SetToolStatusBar(statusStrip1, antennaPowerValue, val.ToString());
             return (reader.SetOutputPower(0xff, val) == 0);
         }
 
@@ -812,7 +844,7 @@ namespace CashierCapsule
             }
             try
             {
-                pcontroller.Open(portname, 57600);
+                pcontroller.Open(portname, 9600);
                 pcontroller.MsgRecieved += ProcessControllerMessage;
                 logger.Info("Open Firmware Controller Success");
             }
@@ -1029,7 +1061,7 @@ namespace CashierCapsule
             try
             {
                 encoder.Open(portname, 9600);
-                encoder.MsgRecieved += ProcessEncoderMessage;
+                encoder.ValueRecieved += ProcessEncoderMessage;
                 logger.Info("Open Encoder Controller Success");
             }
             catch (Exception ex)
@@ -1038,7 +1070,7 @@ namespace CashierCapsule
             }
         }
 
-        private void ProcessEncoderMessage(object sender, PlatformController.MsgEventArgs e)
+        private void ProcessEncoderMessage(object sender, EncoderController.MsgEventArgs e)
         {
             CommunicationProtocol.CMDTYPE ct = e.msg.cmdType;
 
@@ -1104,14 +1136,16 @@ namespace CashierCapsule
         /// <param name="wechatpay_url"></param>
         private void ShowQRCode(string alipay_url, string wechatpay_url)
         {
-            Bitmap amap = BarcodeGenerator.GenerateQRCode(alipay_url, "支付宝");
-            Bitmap bmap = BarcodeGenerator.GenerateQRCode(wechatpay_url, "微信支付");
+            Bitmap amap = BarcodeGenerator.GenerateQRCode(alipay_url);
+            Bitmap bmap = BarcodeGenerator.GenerateQRCode(wechatpay_url);
 
-            Point p = new Point(0, 25);
-            Size s = new Size(145, 145);
+            Point p = new Point(0, 40);
+            Size s = new Size(140, 140);
 
             SetPictureBox(pictureBoxAlipay, CropImage(amap, new Rectangle(p, s)));
             SetPictureBox(pictureBoxWechatpay, CropImage(bmap, new Rectangle(p, s)));
+            SetPanelVisiable(paymentInfo, true);
+            SetPanelVisiable(timerPanel, true);
         }
         #endregion QRCODE
 
@@ -1163,8 +1197,15 @@ namespace CashierCapsule
                         ClearLastUser();
                         ClearLastScan();
 
-                        SetPictureBoxVisibility(pictureBoxFace, false);
+                        SetPictureBoxVisibility(pictureBoxAlwaysOn, true);
+                        //SetPictureBoxVisibility(pictureBoxFace, false);
                         SetTileButtonVisable(bunifuTileButtonFace, false);
+                        SetPictureBoxVisibility(pictureBoxAlwaysOn, false);
+                        SetPictureBoxVisibility(pictureBoxWelcome, true);
+                        SetPictureBoxVisibility(loadBox, true);
+                        SetPanelVisiable(paymentInfo, false);
+                        SetPanelVisiable(timerPanel, false);
+                        SetDataGridViewVisibility(bunifuCustomMerchandiseDataGrid, false);
 
                         //ClearEncoderAbsValue();
                         break;
@@ -1177,16 +1218,18 @@ namespace CashierCapsule
                         UpdateStateMachine(Stages.FaceRecognize);
                         break;
                     }
-                case Stages.FaceRecognize:
+                case Stages.FaceRecognize://raised by state machine
                     {
                         //Open camera to do facial recognition
                         //CameraCV.StartProcessOnFrame();
                         //启动timer，周期刷新picturebox
+                        SetPictureBoxVisibility(pictureBoxAlwaysOn, true);
+                        SetPictureBoxVisibility(loadBox, false);
                         pictureboxRefreshTimer.Start();
                         //will automatically stop when customer is recognized
                         break;
                     }
-                case Stages.CloseDoor://raised by face identify
+                case Stages.CloseDoor://raised by face identify successful in "ShowFaceInPictureBox"
                     {
                         //alarm the door will closing
                         speech.Tts2Play(doorClosingHintStr);
@@ -1215,7 +1258,7 @@ namespace CashierCapsule
 
                         break;
                     }
-                case Stages.WaitForScannerReport:
+                case Stages.WaitForScannerReport://raised by state machine
                     {
                         CheckScanTagCountWithTimeout();
 
@@ -1242,6 +1285,9 @@ namespace CashierCapsule
                             
                             speech.Tts2Play("检测到" + lastScanTagList.EPC.Count.ToString() + "个标签");
 
+                            SetDataGridViewVisibility(bunifuCustomMerchandiseDataGrid, true);
+                            SetPictureBoxVisibility(pictureBoxWelcome, false);
+
                             UpdateStateMachine(Stages.GenerateOrder);
                         }                        
                         break;
@@ -1255,7 +1301,7 @@ namespace CashierCapsule
                         if ((infos.Count() == 1) && (infos[0].id == string.Empty))
                         {
                             logger.Error("UHF Reader scan tag existed, but cannot query any merchandise info from server !!!");
-                            speech.Tts2Play("奇怪，检测到的标签不在库里");
+                            speech.Tts2Play("奇怪，检测到的标签没有一个在库里啊");
                         }
                         else
                         {
@@ -1276,14 +1322,14 @@ namespace CashierCapsule
                                 //add a countdown on the right side to alert user to scan and finish pay
                                 //check the payment result every 1 seconds
                                 //setup time for countdown
+                            
                                 counter = 60;
+                                CountdownTimer.Start();
                                 SetLabelText(bunifuMetroTextbox1, counter.ToString());
                                 speech.Tts2Play(paymentHintStr);
 
-                                timer1.Tick += Timer1_Tick;
-                                timer1.Start();
-
                                 UpdateStateMachine(Stages.WaitForPaymentFinish);
+
                             }
                             //else if(pay with balance)
                             //{
@@ -1317,15 +1363,15 @@ namespace CashierCapsule
                             if (result == DialogResult.Retry)
                             {
                                 counter = 60;
+                                CountdownTimer.Start();
                                 SetLabelText(bunifuMetroTextbox1, counter.ToString());
                                 speech.Tts2Play(paymentHintStr);
-
-                                timer1.Start();
+                                
                                 UpdateStateMachine(Stages.WaitForPaymentFinish);
                             }
                             else
                             {
-                                timer1.Stop();
+                                CountdownTimer.Stop();
                                 //should be equal to cancel button pressed
                                 this.cancelBtn_Click(this, new EventArgs());
                             }
@@ -1336,8 +1382,8 @@ namespace CashierCapsule
                             bool result = client.CheckPaymentResult(lastUserinfo.id, lastTradeNo);
                             if(result == true)
                             {
-                                //payment success
-                                timer1.Stop();
+                                //payment success, stop the timer
+                                CountdownTimer.Stop();
                                 //play success hint sound
                                 speech.Tts2Play(payWithQRCodeSuccessHintStr);
                                 //open door to let out
@@ -1381,7 +1427,6 @@ namespace CashierCapsule
                     }
                 case Stages.WaitForDoorClosedWithNobodyInside://raised by state machine
                     {
-                        //pcontroller.SendCloseDoorMessage();
                         break;
                     }
                 case Stages.OpenDoorToInward://raised by arduino close door response message
@@ -1391,10 +1436,12 @@ namespace CashierCapsule
                     }
                 case Stages.EmergenceAlarm://raised by arduino emergence message
                     {
+                        SetToolStatusBar(statusStrip1, emergenceStateValue, "1");
                         break;
                     }
                 case Stages.EmergenceRelease://should raise by the emergence button is released
                     {
+                        SetToolStatusBar(statusStrip1, emergenceStateValue, "0");
                         break;
                     }
             }
@@ -1442,7 +1489,7 @@ namespace CashierCapsule
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void Timer1_Tick(object sender, EventArgs e)
+        private void CountdownTimer_Tick(object sender, EventArgs e)
         {
             if(counter > 0)
             {
@@ -1453,7 +1500,7 @@ namespace CashierCapsule
             }
             else
             {
-                timer1.Stop();
+                CountdownTimer.Stop();
             }
         }
 
@@ -1471,8 +1518,6 @@ namespace CashierCapsule
             CloseController();
         }
 
-        
-
         private void button3_Click(object sender, EventArgs e)
         {
             string test1 = "https://alipay.com/test1/901291021048291";
@@ -1483,22 +1528,53 @@ namespace CashierCapsule
 
         private void genOrderBtn_Click(object sender, EventArgs e)
         {
+            SetDataGridViewVisibility(bunifuCustomMerchandiseDataGrid, true);
+            SetPictureBoxVisibility(pictureBoxWelcome, false);
             APIClient.TagInfoList testList = new APIClient.TagInfoList();
             //testList.totalNum = 3;
-            testList.EPC.Add("E2806890000000022CD45865");
-            testList.EPC.Add("E2806890000000022CD45873");
-            testList.EPC.Add("E2806890000000022CD458C5");
+            testList.EPC.Add("E2806890000000022CD351D8");
+            testList.EPC.Add("E2806890000000022CD36118");
             //testList.EPC.Add(new APIClient.Tag_EPC() { EPC = "E2806890000000022CD34306" });
             //testList.EPC.Add(new APIClient.Tag_EPC() { EPC = "E2806890000000022CD35126" });
             //testList.EPC.Add(new APIClient.Tag_EPC() { EPC = "E2806890000000022CD341EE" });
             APIClient.MerchandiseInfoCashier[] infos = client.QueryMerchandiseInfo(testList);
-            APIClient.Order order = new APIClient.Order("1", infos);
+            SetDataGridViewInfo(bunifuCustomMerchandiseDataGrid, infos);
+            APIClient.Order order = new APIClient.Order("53", infos);
             //generate order online
             string tradeNo = client.CreateOrderNo(order);
             //get qr code url from wechatpay and alipay
-            APIClient.Payment_Response resp = client.GetPaymentCodeUrl("1", tradeNo);
+            APIClient.Payment_Response resp = client.GetPaymentCodeUrl("53", tradeNo);
 
-            MessageBox.Show(resp.status.ToString());
+            if (resp.status == "0") //&& not pay with balance and sucess with qr code
+            {
+                ShowQRCode(resp.alipay_code_url, resp.wechat_pay_code_url);
+
+                //add a countdown on the right side to alert user to scan and finish pay
+                //check the payment result every 1 seconds
+                //setup time for countdown
+                counter = 60;
+                CountdownTimer.Start();
+                SetLabelText(bunifuMetroTextbox1, counter.ToString());
+                speech.Tts2Play(paymentHintStr);
+
+                UpdateStateMachine(Stages.WaitForPaymentFinish);
+            }
+            //else if(pay with balance)
+            //{
+            //  UpdateStateMachine(Stages.OpenDoorToOutward);
+            //}
+            else if (resp.status == "1")
+            {
+                //play some error hint
+                speech.Tts2Play(codeGenerateFailHintStr);
+                logger.Error("Payment Get QR CODE URL failed !!!");
+            }
+            else if (resp.status == "2")
+            {
+                //pay with balance success
+                speech.Tts2Play(payWithBalanceSuccessHintStr);
+                UpdateStateMachine(Stages.OpenDoorToOutward);
+            }
         }
 
         /// <summary>
@@ -1590,7 +1666,7 @@ namespace CashierCapsule
 
         private void TestOpenOutBtn_Click(object sender, EventArgs e)
         {
-            UpdateStateMachine(Stages.OpenDoorToInward);
+            UpdateStateMachine(Stages.OpenDoorToOutward);
         }
 
         private void TestCloseNobodyBtn_Click(object sender, EventArgs e)
@@ -1601,6 +1677,26 @@ namespace CashierCapsule
         private void TestOpenInBtn_Click(object sender, EventArgs e)
         {
             UpdateStateMachine(Stages.OpenDoorToInward);
+        }
+
+        private void bunifuFlatButton1_Click_1(object sender, EventArgs e)
+        {
+            speech.Tts2Play(paymentCanceledHintStr);
+
+            UpdateStateMachine(Stages.OpenDoorToInward);
+
+            ClearLastScan();
+            ClearLastUser();
+            bool ret = client.CancelPayment(lastUserinfo.id, lastTradeNo);
+            if (ret)
+            {
+                lastTradeNo = string.Empty;
+                logger.Info("Order canceled successful");
+            }
+            else
+            {
+                logger.Error("Order cancel failed");
+            }
         }
     }
 }

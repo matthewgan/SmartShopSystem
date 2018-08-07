@@ -74,9 +74,24 @@ namespace EntranceGate
         System.Timers.Timer faceErrorResetTimer;
 
         /// <summary>
+        /// 系统锁定timer
+        /// </summary>
+        System.Timers.Timer LockTimer;
+
+        /// <summary>
+        /// 每次操作锁定时间间隔ms
+        /// </summary>
+        static int locktime = 3000;
+
+        /// <summary>
         /// 随机生成文件名，防止冲突
         /// </summary>
         System.Random rand_filename = new Random();
+
+        /// <summary>
+        /// 系统锁定状态
+        /// </summary>
+        private bool sysIsLock = false;
 
         #endregion 设备实例和全局变量
 
@@ -287,6 +302,10 @@ namespace EntranceGate
             faceErrorResetTimer.Interval = 10000;
             faceErrorResetTimer.Start();
 
+            //设置lock timer
+            LockTimer = new System.Timers.Timer();
+            LockTimer.Elapsed += new ElapsedEventHandler(UnlockSystem);
+
             //open pictualbox always on
             SetPictureBoxVisibility(pictureBoxAlwaysOn, true);
         }
@@ -329,50 +348,58 @@ namespace EntranceGate
         /// <param name="e"></param>
         private void EntryByCodeProcess(object sender, TX400Scanner.QRcodeScannerEventArgs e)
         {
-            //Lock the scanner to skip code
-            System.Timers.Timer LockTimer = new System.Timers.Timer();
-            LockTimer.Interval = 3000;  //5 second protect time
-            LockTimer.Elapsed += new ElapsedEventHandler(UnlockScanner);
-            LockTimer.AutoReset = false;
-            LockTimer.Start();
-            logger.Info("Recieved code=" + e.Code);
-            logger.Trace("Lock QR code scanner started " + DateTime.Now.ToString());
-            scanner.Lock();
-
-            char[] trimchars = new char[2] { '\0', ' ' };
-            string trimcode = e.Code.Trim(trimchars);
-
-            APIClient.Code code = new APIClient.Code() { code = trimcode };
-
-            APIClient.UserInfo userinfo = client.EntryByCode(code);
-            if (userinfo.nickName != string.Empty)
+            //scanner is trigged, lock the system 3s
+            if(sysIsLock == false)
             {
-                SetTileButton(tileBtn, userinfo);
-                SetTileButtonVisable(tileBtn, true);
-                SetPictureBox(pictureBoxCenter, new Bitmap("success.gif"));
-                SetPictureBoxVisibility(loadBox_small, false);
-                SetMessageLabel(bunifuCustomLabel1, code_identify_success_str);
+                //lock the scanner in case this process is interrupted
+                scanner.Lock();
+                logger.Info("Recieved code=" + e.Code);
+                logger.Trace("Lock QR code scanner started " + DateTime.Now.ToString());
 
-                OpenGate();
+                char[] trimchars = new char[2] { '\0', ' ' };
+                string trimcode = e.Code.Trim(trimchars);
 
-                PlayWelcomSound(userinfo.nickName);
+                APIClient.Code code = new APIClient.Code() { code = trimcode };
 
-                APIClient.Log log = new APIClient.Log()
+                APIClient.UserInfo userinfo = client.EntryByCode(code);
+                if (userinfo.nickName != string.Empty)
                 {
-                    who = userinfo.id,
-                    where = shopid
-                };
+                    SetTileButton(tileBtn, userinfo);
+                    SetTileButtonVisable(tileBtn, true);
+                    SetPictureBox(pictureBoxCenter, new Bitmap("success.gif"));
+                    SetPictureBoxVisibility(loadBox_small, false);
+                    SetMessageLabel(bunifuCustomLabel1, code_identify_success_str);
 
-                client.VistLogToSystem(log);
+                    OpenGate();
 
-                //clear textbox
-                SetDataText(richTextBox1, string.Empty);
+                    PlayWelcomSound(userinfo.nickName);
+
+                    APIClient.Log log = new APIClient.Log()
+                    {
+                        who = userinfo.id,
+                        where = shopid
+                    };
+
+                    client.VistLogToSystem(log);
+
+                    //success code will lock the system for 3s
+                    LockSystem();
+
+                    //clear textbox
+                    SetDataText(richTextBox1, string.Empty);
+
+                }
+                else
+                {
+                    //服务器没有返回用户信息
+                    //todo：提示QRcode错误
+                    logger.Error("Server return unvalid user info, QR code Error");
+                    scanner.Unlock();
+                }
             }
             else
             {
-                //服务器没有返回用户信息
-                //todo：提示QRcode错误
-                logger.Error("Server return unvalid user info, QR code Error");
+                //skip this scan result if system is lockeds
             }
         }
 
@@ -381,10 +408,33 @@ namespace EntranceGate
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void UnlockScanner(object sender, System.Timers.ElapsedEventArgs e)
+        private void UnlockScanner()
         {
             scanner.Unlock();
             logger.Trace("Lock QR code scanner stoped " + DateTime.Now.ToString());
+        }
+
+        /// <summary>
+        /// 每次刷脸和扫码成功，锁定系统3s
+        /// </summary>
+        private void LockSystem()
+        {
+            sysIsLock = true;
+            LockTimer.Interval = locktime;  //3 second protect time
+            LockTimer.AutoReset = false;
+            LockTimer.Start();
+            scanner.Lock();
+        }
+
+        /// <summary>
+        /// 系统解锁状态，timer调用解锁
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void UnlockSystem(object sender, System.Timers.ElapsedEventArgs e)
+        {
+            sysIsLock = false;
+            UnlockScanner();
         }
 
         /// <summary>
@@ -465,38 +515,44 @@ namespace EntranceGate
         /// <param name="e"></param>
         private void ShowFaceInPictureBox(object sender, CameraCV.CameraFaceEventArgs e)
         {
-            if (e.FaceImage != null)
+            if (sysIsLock == false)
             {
-                Bitmap bitmap = (Bitmap)e.FaceImage.Clone();
-
-                //change face search from server
-                //if (faceIdentify(bitmap))
-                if(faceIdentify_usingAIP(bitmap))
+                if (e.FaceImage != null)
                 {
-                    SetPictureBox(pictureBoxCenter, new Bitmap("success.gif"));
+                    Bitmap bitmap = (Bitmap)e.FaceImage.Clone();
 
-                    //hide load box
-                    SetPictureBoxVisibility(loadBox_small, false);
-
-                    //play welcome tts with name on the tilebutton
-                    PlayWelcomSound(tileBtn.LabelText);
-
-                    SetMessageLabel(bunifuCustomLabel1, face_identify_success_str);
-
-                    faceError = 0;
-                }
-                else
-                {
-                    faceError++;
-                    if(faceError > 3)
+                    //change face search from server
+                    //if (faceIdentify(bitmap))
+                    if (faceIdentify_usingAIP(bitmap))
                     {
-                        //show error text on the screen
-                        SetMessageLabel(bunifuCustomLabel1, face_identify_error_str);
+                        SetPictureBox(pictureBoxCenter, new Bitmap("success.gif"));
 
-                        //play error hint
-                        PlayErrorSound();
+                        //hide load box
+                        SetPictureBoxVisibility(loadBox_small, false);
+
+                        //play welcome tts with name on the tilebutton
+                        PlayWelcomSound(tileBtn.LabelText);
+
+                        SetMessageLabel(bunifuCustomLabel1, face_identify_success_str);
 
                         faceError = 0;
+
+                        //success face recogn will lock the system 3s
+                        LockSystem();
+                    }
+                    else
+                    {
+                        faceError++;
+                        if (faceError > 3)
+                        {
+                            //show error text on the screen
+                            SetMessageLabel(bunifuCustomLabel1, face_identify_error_str);
+
+                            //play error hint
+                            PlayErrorSound();
+
+                            faceError = 0;
+                        }
                     }
                 }
             }

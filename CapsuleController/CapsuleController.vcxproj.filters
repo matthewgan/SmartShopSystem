@@ -30,6 +30,9 @@
     <ClInclude Include="doordriver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="motortimer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="doordriver.cpp">
